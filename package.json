@@ -2,6 +2,8 @@
   "name": "doconline-office",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
+  "author": "Carlos Leon",
   "description": "Editor de documentos tipo Word para React/Next.js: hojas reales, encabezados, tablas, .docx y PDF",
   "scripts": {
     "dev": "next dev -p 3005",

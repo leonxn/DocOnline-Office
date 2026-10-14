@@ -22,6 +22,7 @@ dependencias son libres y se pueden usar en proyectos comerciales.
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Límites conocidos](#límites-conocidos)
 - [Dependencias y licencias](#dependencias-y-licencias)
+- [Licencia](#licencia)
 
 ---
 
@@ -368,3 +369,10 @@ docs/screenshots/           capturas del README
 
 Este proyecto no contiene código de OnlyOffice ni de Microsoft Word: es una implementación
 propia sobre las librerías de la tabla.
+
+---
+
+## Licencia
+
+[MIT](LICENSE) © 2026 Carlos Leon. Puedes usarlo, modificarlo y distribuirlo, también en
+proyectos comerciales, siempre que conserves el aviso de copyright y la licencia.
