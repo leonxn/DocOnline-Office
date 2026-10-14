@@ -1,0 +1,37 @@
+{
+  "name": "doconline-office",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Editor de documentos tipo Word para React/Next.js: hojas reales, encabezados, tablas, .docx y PDF",
+  "scripts": {
+    "dev": "next dev -p 3005",
+    "build": "next build",
+    "start": "next start -p 3005"
+  },
+  "dependencies": {
+    "@tiptap/extension-highlight": "^3.32.0",
+    "@tiptap/extension-image": "^3.32.0",
+    "@tiptap/extension-list": "^3.32.0",
+    "@tiptap/extension-subscript": "^3.32.0",
+    "@tiptap/extension-superscript": "^3.32.0",
+    "@tiptap/extension-table": "^3.32.0",
+    "@tiptap/extension-text-align": "^3.32.0",
+    "@tiptap/extension-text-style": "^3.32.0",
+    "@tiptap/extensions": "^3.32.0",
+    "@tiptap/pm": "^3.32.0",
+    "@tiptap/react": "^3.32.0",
+    "@tiptap/starter-kit": "^3.32.0",
+    "docx": "^9.11.0",
+    "lucide-react": "^1.57.0",
+    "mammoth": "^1.13.0",
+    "next": "^15.5.28",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^5.9.3"
+  }
+}

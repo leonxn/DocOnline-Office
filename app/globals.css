@@ -1,0 +1,51 @@
+:root {
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: #f4f5f7;
+  color: #1f2328;
+  font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+a { color: #1d5fc4; }
+
+.demo-nav {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+.demo-nav strong { margin-right: auto; }
+
+.demo-form { max-width: 1100px; margin: 0 auto; padding: 16px; }
+.demo-form h1 { font-size: 1.4rem; margin: 8px 0 4px; }
+.demo-form .lead { color: #5f6670; margin: 0 0 16px; }
+.demo-field { margin-bottom: 16px; }
+.demo-field label, .demo-label { display: block; font-weight: 600; margin-bottom: 4px; }
+.demo-field > input {
+  width: 100%;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid #b9bec6;
+  border-radius: 6px;
+}
+.demo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.demo-actions button {
+  font: inherit;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #b9bec6;
+  background: #fff;
+  cursor: pointer;
+}
+.demo-actions button.primary { background: #1d5fc4; border-color: #1d5fc4; color: #fff; }
+.demo-result {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #e6f4ec;
+  color: #1d6b40;
+  overflow-wrap: anywhere;
+}
