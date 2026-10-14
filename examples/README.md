@@ -1,7 +1,12 @@
 # Ejemplos
 
-Cada carpeta es un caso de uso listo para copiar a tu proyecto Next.js. Todos importan el
-componente desde `@/components/word-editor`. Copia primero esa carpeta (ver el README principal).
+Cada carpeta es un caso de uso listo para copiar a tu proyecto Next.js. Aquí importan el
+componente desde `@/components/word-editor` (el código de este repositorio). En tu proyecto,
+después de `npm i doconline-office`, cambia esa línea por:
+
+```ts
+import { WordEditor } from 'doconline-office';
+```
 
 | Ejemplo | Qué muestra |
 |---|---|

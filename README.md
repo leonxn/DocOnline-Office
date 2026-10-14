@@ -6,7 +6,19 @@ página, tablas, regla interactiva, exportación a **.docx** e impresión a **PD
 Corre 100 % en el navegador. No necesita servidor de documentos ni licencias de pago. Todas las
 dependencias son libres y se pueden usar en proyectos comerciales.
 
-![Editor](docs/screenshots/editor.png)
+```bash
+npm i doconline-office      # o: pnpm add doconline-office  /  yarn add doconline-office
+```
+
+```tsx
+import { WordEditor } from 'doconline-office';
+
+<div style={{ height: '100vh' }}>
+  <WordEditor />
+</div>
+```
+
+![Editor](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/editor.png)
 
 ---
 
@@ -16,6 +28,7 @@ dependencias son libres y se pueden usar en proyectos comerciales.
 - [Características](#características)
 - [Probarlo en 1 minuto](#probarlo-en-1-minuto)
 - [Cómo implementarlo en tu proyecto](#cómo-implementarlo-en-tu-proyecto)
+- [Publicar una nueva versión en npm](#publicar-una-nueva-versión-en-npm)
 - [Guardar y abrir documentos](#guardar-y-abrir-documentos)
 - [Referencia del componente](#referencia-del-componente)
 - [Ejemplos](#ejemplos)
@@ -30,15 +43,15 @@ dependencias son libres y se pueden usar en proyectos comerciales.
 
 | Encabezado y pie (doble clic en el margen) | Tablas con estilos, asas y regla de columnas |
 |---|---|
-| ![Encabezado y pie](docs/screenshots/encabezado-pie.png) | ![Tablas](docs/screenshots/tablas.png) |
+| ![Encabezado y pie](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/encabezado-pie.png) | ![Tablas](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/tablas.png) |
 
 | Paginación real (el texto pasa de hoja en hoja) | Menú contextual de tablas |
 |---|---|
-| ![Paginación](docs/screenshots/paginacion.png) | ![Menú contextual](docs/screenshots/menu-contextual.png) |
+| ![Paginación](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/paginacion.png) | ![Menú contextual](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/menu-contextual.png) |
 
 | Disposición: sangrías, espaciado y marca de agua | Dentro de un formulario |
 |---|---|
-| ![Disposición](docs/screenshots/disposicion.png) | ![Formulario](docs/screenshots/formulario.png) |
+| ![Disposición](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/disposicion.png) | ![Formulario](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/formulario.png) |
 
 ---
 
@@ -123,19 +136,37 @@ npm run dev
 
 ## Cómo implementarlo en tu proyecto
 
-### 1. Copia el componente
+### 1. Instálalo
 
-Copia la carpeta [`components/word-editor/`](components/word-editor) a tu proyecto, por ejemplo
-a `src/components/word-editor/`. Es autocontenida: trae sus estilos y no depende del resto de
-este repositorio.
-
-### 2. Instala las dependencias
+**Con npm, pnpm o yarn** (recomendado):
 
 ```bash
-npm i @tiptap/react@^3.32 @tiptap/pm@^3.32 @tiptap/starter-kit@^3.32 @tiptap/extension-text-style@^3.32 @tiptap/extension-table@^3.32 @tiptap/extension-image@^3.32 @tiptap/extension-text-align@^3.32 @tiptap/extension-highlight@^3.32 @tiptap/extension-subscript@^3.32 @tiptap/extension-superscript@^3.32 @tiptap/extension-list@^3.32 @tiptap/extensions@^3.32 docx@^9.11 mammoth@^1.13 lucide-react
+npm i doconline-office
+# o
+pnpm add doconline-office
+# o
+yarn add doconline-office
 ```
 
-Requiere **React 18 o 19**.
+- Requiere **React 18 o 19**. Si tu proyecto no lo tiene, instálalo: `npm i react react-dom`.
+- Las dependencias (Tiptap, docx, mammoth, lucide-react) se instalan solas.
+- **No hay que importar CSS:** los estilos se cargan al importar el componente.
+
+**Directo desde GitHub** (por ejemplo, antes de publicar en npm o para probar la rama `main`):
+
+```bash
+npm i github:leonxn/DocOnline-Office
+# o
+pnpm add github:leonxn/DocOnline-Office
+```
+
+Al instalar desde GitHub el paquete se compila en tu máquina (script `prepare`), así que tarda
+un poco más.
+
+**Copiando el código** (si quieres modificar el editor dentro de tu proyecto): copia
+[`components/word-editor/`](components/word-editor) e instala las dependencias de la sección
+`dependencies` del [`package.json`](package.json). En ese caso importa desde tu carpeta
+(`@/components/word-editor`) en vez de `doconline-office`.
 
 ### 3. Úsalo
 
@@ -145,7 +176,7 @@ Requiere **React 18 o 19**.
 // app/documentos/nuevo/page.tsx
 'use client';
 
-import { WordEditor } from '@/components/word-editor';
+import { WordEditor } from 'doconline-office';
 
 export default function NuevoDocumento() {
   return (
@@ -161,14 +192,14 @@ export default function NuevoDocumento() {
 }
 ```
 
-> Si tu proyecto no usa el alias `@/`, importa con una ruta relativa
-> (`../components/word-editor`).
+El paquete ya trae la directiva `'use client'`, así que también puedes importarlo desde un
+componente de servidor; el editor se renderiza en el cliente.
 
 **React con Vite (u otro bundler).** Funciona igual: importa `WordEditor` y dale una altura a su
-contenedor. Las líneas `'use client'` se ignoran fuera de Next.js.
+contenedor.
 
 ```tsx
-import { WordEditor } from './components/word-editor';
+import { WordEditor } from 'doconline-office';
 
 export function App() {
   return (
@@ -186,7 +217,7 @@ Usa una `ref` para leer el documento al enviar:
 ```tsx
 'use client';
 import { useRef } from 'react';
-import { WordEditor, type WordEditorHandle } from '@/components/word-editor';
+import { WordEditor, type WordEditorHandle } from 'doconline-office';
 
 export function Formulario() {
   const ref = useRef<WordEditorHandle>(null);
@@ -242,6 +273,19 @@ export function Formulario() {
     },
   }}
 />
+```
+
+---
+
+## Publicar una nueva versión en npm
+
+Pasos para el mantenedor del paquete. El detalle está en [PUBLICAR.md](PUBLICAR.md).
+
+```bash
+npm login                 # una sola vez
+npm version patch         # 1.0.0 → 1.0.1 (minor: funciones nuevas, major: cambios que rompen)
+npm publish               # compila, revisa los tipos y publica
+git push --follow-tags    # sube el commit y la etiqueta de la versión
 ```
 
 ---
@@ -310,7 +354,9 @@ principal se cambia con la variable `--we-accent`:
 
 ## Ejemplos
 
-En la carpeta [`examples/`](examples) hay casos listos para copiar:
+En la carpeta [`examples/`](examples) hay casos listos para copiar. Importan desde
+`@/components/word-editor` (el código de este repositorio); en tu proyecto cambia esa línea por
+`from 'doconline-office'`.
 
 | Ejemplo | Qué muestra |
 |---|---|
@@ -335,6 +381,8 @@ components/word-editor/     ← el componente (copia esta carpeta)
 ├── io/                     .docx (exportar/importar), impresión y archivos
 └── ui/                     cinta de opciones, reglas, menú contextual, tablas…
 examples/                   casos de uso para copiar
+dist/                       paquete compilado para npm (se genera con `npm run build:lib`)
+tsup.config.ts              configuración del build del paquete
 app/                        demo (editor completo y formulario)
 docs/screenshots/           capturas del README
 ```

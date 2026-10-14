@@ -4,6 +4,7 @@ import type { Mark } from '@tiptap/pm/model';
 import { EditorContent, useEditor, useEditorState, type Editor, type JSONContent } from '@tiptap/react';
 import { Printer, Redo2, Save, Search, Undo2 } from 'lucide-react';
 import {
+  forwardRef,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -14,7 +15,6 @@ import {
   type CSSProperties,
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
-  type Ref,
 } from 'react';
 import { CONTENT_CSS } from './content-styles';
 import { buildExtensions } from './extensions';
@@ -69,7 +69,6 @@ export interface WordEditorProps {
   /** Oculta la barra superior con el título (útil dentro de formularios). */
   hideTitleBar?: boolean;
   className?: string;
-  ref?: Ref<WordEditorHandle>;
 }
 
 /** Documento de entrada: como `WordDocument`, pero todo opcional. */
@@ -169,17 +168,20 @@ function stripPageFields(content: HeaderFooterContent): HeaderFooterContent {
   return isHeaderFooterEmpty(out) ? null : out;
 }
 
-export function WordEditor({
-  initialValue,
-  onChange,
-  onSave,
-  readOnly = false,
-  placeholder = 'Escribe aquí…',
-  height = '100%',
-  hideTitleBar = false,
-  className = '',
+/** Editor de documentos tipo Word. `forwardRef` para que la ref funcione en React 18 y 19. */
+export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function WordEditor(
+  {
+    initialValue,
+    onChange,
+    onSave,
+    readOnly = false,
+    placeholder = 'Escribe aquí…',
+    height = '100%',
+    hideTitleBar = false,
+    className = '',
+  },
   ref,
-}: WordEditorProps) {
+) {
   const initial = useMemo(() => normalize(initialValue), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [title, setTitle] = useState(initial.title);
   const [settings, setSettings] = useState<PageSettings>(initial.settings);
@@ -983,4 +985,4 @@ export function WordEditor({
       />
     </div>
   );
-}
+});
