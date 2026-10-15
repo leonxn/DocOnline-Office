@@ -5,6 +5,8 @@ import {
   Document,
   ExternalHyperlink,
   HeightRule,
+  HorizontalPositionAlign,
+  HorizontalPositionRelativeFrom,
   Footer,
   Header,
   HeadingLevel,
@@ -22,12 +24,17 @@ import {
   Table,
   TableCell,
   TableRow,
+  TextWrappingSide,
+  TextWrappingType,
+  VerticalPositionRelativeFrom,
   TextRun,
   VerticalAlignTable,
   WidthType,
   convertMillimetersToTwip,
 } from 'docx';
 import { INDENT_STEP_CM } from '../extensions/paragraph-format';
+import { normalizeGraphic, renderGraphicSvg, svgToPng } from '../graphics/render';
+import type { GraphicType } from '../graphics/types';
 import {
   DEFAULT_FONT,
   DEFAULT_FONT_SIZE,
@@ -219,6 +226,42 @@ async function imageParagraph(node: JSONContent, ctx: Ctx): Promise<Paragraph | 
     // Imagen remota sin CORS: se deja un aviso en lugar de romper la exportación
     return new Paragraph({ children: [new TextRun({ text: `[Imagen no exportable: ${src.slice(0, 60)}]`, italics: true, color: '888888' })] });
   }
+}
+
+/** Formas, gráficos y SmartArt: se dibujan en PNG (2×) y se insertan como imagen, flotante si rodea el texto. */
+async function graphicParagraph(node: JSONContent): Promise<Paragraph | null> {
+  const gtype = (node.attrs?.gtype ?? 'shape') as GraphicType;
+  const d = normalizeGraphic(gtype, node.attrs?.data ?? {}) as unknown as Record<string, any>;
+  const width = Math.max(1, Math.round(d.width));
+  const height = Math.max(1, Math.round(d.height));
+  const png = await svgToPng(renderGraphicSvg(gtype, d), width, height);
+  if (!png) return null;
+  const EMU_PX = 9525;
+  const floating =
+    d.wrap === 'left' || d.wrap === 'right'
+      ? {
+          horizontalPosition: {
+            relative: HorizontalPositionRelativeFrom.COLUMN,
+            align: d.wrap === 'left' ? HorizontalPositionAlign.LEFT : HorizontalPositionAlign.RIGHT,
+          },
+          verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 0 },
+          wrap: { type: TextWrappingType.SQUARE, side: TextWrappingSide.BOTH_SIDES },
+          margins: { top: 4 * EMU_PX, bottom: 8 * EMU_PX, left: 16 * EMU_PX, right: 16 * EMU_PX },
+        }
+      : undefined;
+  return new Paragraph({
+    alignment: floating ? undefined : ALIGN[d.align ?? 'center'],
+    spacing: floating ? { after: 0 } : undefined,
+    children: [
+      new ImageRun({
+        type: 'png',
+        data: png,
+        transformation: { width, height, ...(gtype === 'shape' && d.rotation ? { rotation: d.rotation } : {}) },
+        floating,
+        altText: { name: d.title || d.text || gtype, description: d.title || d.text || gtype, title: d.title || d.text || gtype },
+      }),
+    ],
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -447,6 +490,10 @@ async function blockToDocx(node: JSONContent, ctx: Ctx, extra: Record<string, un
       return [await tableBlock(node, ctx)];
     case 'image': {
       const p = await imageParagraph(node, ctx);
+      return p ? [p] : [];
+    }
+    case 'graphic': {
+      const p = await graphicParagraph(node);
       return p ? [p] : [];
     }
     default:

@@ -1,4 +1,7 @@
 import type { Editor } from '@tiptap/react';
+import { NodeSelection } from '@tiptap/pm/state';
+import { normalizeGraphic } from '../graphics/render';
+import type { GraphicType } from '../graphics/types';
 import { INDENT_STEP_CM } from '../extensions/paragraph-format';
 import { getSearchState } from '../extensions/search-replace';
 
@@ -34,6 +37,8 @@ export function selectEditorState({ editor }: { editor: Editor | null }) {
     textAlign: (block.textAlign as string | undefined) ?? 'left',
     lineSpacing: (block.lineSpacing as string | undefined) ?? null,
     shading: (block.shading as string | undefined) ?? null,
+    dropCap: (editor.getAttributes('paragraph').dropCap as 'drop' | 'margin' | null | undefined) ?? null,
+    graphic: graphicState(editor),
     /** Sangrías del párrafo actual en cm (para la regla). */
     indentLeftCm: ((block.indent as number | undefined) ?? 0) * INDENT_STEP_CM,
     firstLineCm: (block.firstLine as number | undefined) ?? 0,
@@ -64,6 +69,14 @@ export function selectEditorState({ editor }: { editor: Editor | null }) {
     searchIndex: search.index,
     editable: editor.isEditable,
   };
+}
+
+/** Forma, gráfico o SmartArt seleccionado (para el panel de propiedades). */
+function graphicState(editor: Editor) {
+  const sel = editor.state.selection;
+  if (!(sel instanceof NodeSelection) || sel.node.type.name !== 'graphic') return null;
+  const gtype = sel.node.attrs.gtype as GraphicType;
+  return { pos: sel.from, gtype, data: normalizeGraphic(gtype, sel.node.attrs.data ?? {}) };
 }
 
 /** Atributos de la tabla, fila y celda donde está el cursor (para la pestaña Tabla). */

@@ -53,7 +53,10 @@ export function buildSheetClones(geo: PrintGeometry): HTMLElement[] {
     flow
       .querySelectorAll('.we-search-match, .ProseMirror-selectednode, .selectedCell')
       .forEach((el) => el.classList.remove('we-search-match', 'we-search-current', 'ProseMirror-selectednode', 'selectedCell'));
-    flow.querySelectorAll('[data-resize-handle], .column-resize-handle, .ProseMirror-gapcursor').forEach((el) => el.remove());
+    flow
+      .querySelectorAll('[data-resize-handle], .column-resize-handle, .ProseMirror-gapcursor, .we-gfx-handle, .we-gfx-rotate, .we-gfx-size, .we-gfx-text-edit')
+      .forEach((el) => el.remove());
+    flow.querySelectorAll('.we-gfx.is-selected').forEach((el) => el.classList.remove('is-selected'));
     clip.appendChild(flow);
     page.appendChild(clip);
     return page;

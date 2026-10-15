@@ -38,6 +38,7 @@ import {
 } from './types';
 import { AiConnectDialog } from './ui/AiConnectDialog';
 import { AiPanel } from './ui/AiPanel';
+import { GraphicPanel } from './ui/GraphicPanel';
 import { ContextMenu } from './ui/ContextMenu';
 import { Btn } from './ui/controls';
 import { selectEditorState } from './ui/editor-state';
@@ -320,6 +321,11 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
   }, [title, settings, scheduleChange]);
 
   const editable = !readOnly && !view.readMode;
+
+  // Panel de propiedades de la forma/gráfico seleccionado; se reabre al elegir otro objeto
+  const selectedGraphic = !hfEdit && editable ? sMain?.graphic ?? null : null;
+  const [graphicPanelClosed, setGraphicPanelClosed] = useState<number | null>(null);
+  const showGraphicPanel = !!selectedGraphic && graphicPanelClosed !== selectedGraphic.pos;
 
   useEffect(() => {
     editor?.setEditable(editable && !hfEdit);
@@ -1045,7 +1051,11 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
         </div>
         </div>
 
-        {chat && activeEditor && view.rightPanel && !readOnly && (
+        {editor && selectedGraphic && showGraphicPanel && (
+          <GraphicPanel editor={editor} graphic={selectedGraphic} onClose={() => setGraphicPanelClosed(selectedGraphic.pos)} />
+        )}
+
+        {chat && activeEditor && view.rightPanel && !readOnly && !showGraphicPanel && (
           <AiPanel
             chat={chat}
             editor={activeEditor}

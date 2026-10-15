@@ -15,6 +15,8 @@ declare module '@tiptap/core' {
       setParagraphIndents: (values: { indent?: number; firstLine?: number; indentRight?: number }) => ReturnType;
       /** Espacio antes/después del párrafo en pt (`null` = el del estilo). */
       setParagraphSpaces: (values: { spaceBefore?: number | null; spaceAfter?: number | null }) => ReturnType;
+      /** Letra capital: `drop` = en el texto, `margin` = en el margen, `null` = ninguna. */
+      setDropCap: (value: 'drop' | 'margin' | null) => ReturnType;
       /** Quita interlineado, sangría, sombreado y espaciado del párrafo. */
       resetParagraphFormat: () => ReturnType;
     };
@@ -88,6 +90,18 @@ export const ParagraphFormat = Extension.create({
         },
       },
       {
+        types: ['paragraph'],
+        attributes: {
+          dropCap: {
+            default: null,
+            // Como en Word, el párrafo nuevo (Enter) no hereda la letra capital
+            keepOnSplit: false,
+            parseHTML: (el) => el.getAttribute('data-dropcap'),
+            renderHTML: (attrs) => (attrs.dropCap ? { 'data-dropcap': attrs.dropCap } : {}),
+          },
+        },
+      },
+      {
         types: ['bulletList'],
         attributes: {
           listStyle: {
@@ -129,6 +143,10 @@ export const ParagraphFormat = Extension.create({
       setParagraphShading: (color) => updateBlocks({ shading: color }),
       setParagraphIndents: (values) => updateBlocks(values),
       setParagraphSpaces: (values) => updateBlocks(values),
+      setDropCap:
+        (value) =>
+        ({ commands }) =>
+          commands.updateAttributes('paragraph', { dropCap: value }),
       resetParagraphFormat: () =>
         updateBlocks({
           lineSpacing: null,

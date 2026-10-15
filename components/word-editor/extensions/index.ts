@@ -9,6 +9,7 @@ import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-s
 import { CharacterCount, Placeholder } from '@tiptap/extensions';
 import StarterKit from '@tiptap/starter-kit';
 import { PageCountField, PageNumberField } from './fields';
+import { Graphic } from './graphics';
 import { PageBreak } from './page-break';
 import { Pagination } from './pagination';
 import { ParagraphFormat } from './paragraph-format';
@@ -57,6 +58,7 @@ export function buildExtensions(placeholder: string, options: { pagination?: boo
     WordTableHeader,
     WordTableCell,
     AlignedImage,
+    Graphic,
     PageBreak,
     ParagraphFormat,
     SearchReplace,

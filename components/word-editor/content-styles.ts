@@ -71,6 +71,11 @@ export const CONTENT_CSS = `
 .we-content [data-resize-container]:has(img[data-align="right"]) { justify-content: flex-end; }
 .we-content [data-resize-wrapper] img { margin: 0; }
 .we-content mark { padding: 0; color: inherit; }
+/* Formas, gráficos y SmartArt */
+.we-content .we-gfx-static img { max-width: none; margin: 0; height: auto; }
+/* Letra capital */
+.we-content p[data-dropcap]::first-letter { float: left; font-size: 3.4em; line-height: 0.82; padding: 0.06em 0.08em 0 0; font-weight: 400; }
+.we-content p[data-dropcap="margin"]::first-letter { margin-left: -0.95em; padding-right: 0.14em; }
 .we-content .we-page-break { break-after: page; page-break-after: always; height: 0; }
 `;
 

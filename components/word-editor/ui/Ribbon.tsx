@@ -11,6 +11,8 @@ import {
   BookOpen,
   Bold,
   CalendarDays,
+  CaseUpper,
+  ChartColumnBig,
   CaseSensitive,
   Check,
   ChevronUp,
@@ -37,7 +39,11 @@ import {
   ListTodo,
   Maximize2,
   Minus,
+  Network,
   Omega,
+  Sigma,
+  SquareDashedText,
+  WholeWord,
   PaintBucket,
   Paintbrush,
   PanelBottom,
@@ -75,6 +81,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ChartPicker, ShapeGallery, SmartArtPicker, TextArtPicker, insertChart, insertShape, insertSmartArt, insertTextArt } from './insert-graphics';
 import {
   DEFAULT_FONT,
   DEFAULT_FONT_SIZE,
@@ -669,6 +676,18 @@ function HomeTab({ editor, s, painterActive, onPainter, notify, view, onView }: 
 // Insertar
 // ---------------------------------------------------------------------------
 
+/** Ecuaciones frecuentes (se insertan como texto matemático). */
+const EQUATIONS: [string, string][] = [
+  ['Área del círculo', 'A = πr²'],
+  ['Teorema de Pitágoras', 'a² + b² = c²'],
+  ['Fórmula cuadrática', 'x = (−b ± √(b² − 4ac)) / 2a'],
+  ['Binomio al cuadrado', '(a + b)² = a² + 2ab + b²'],
+  ['Suma de 1 a n', '∑ᵢ₌₁ⁿ i = n(n + 1) / 2'],
+  ['Identidad de Euler', 'e^(iπ) + 1 = 0'],
+  ['Pendiente', 'm = (y₂ − y₁) / (x₂ − x₁)'],
+  ['Interés compuesto', 'A = P(1 + r/n)ⁿᵗ'],
+];
+
 const SYMBOLS = '©®™°±×÷≠≤≥≈∞√∑πΩµ€£¥¢§¶†‡•…–—«»“”‘’¿¡←→↑↓↔⇒✓✔✗★☆♥♦♣♠½¼¾²³¹αβγδλσ'.split('');
 
 export function InlineForm({
@@ -782,6 +801,27 @@ function InsertTab(props: RibbonProps) {
             </>
           )}
         </Dropdown>
+        <ShapeGallery size="lg" trigger="Forma" onPick={(kind) => insertShape(editor, kind)} />
+        <Dropdown title="SmartArt" size="lg" label="SmartArt" trigger={<Network size={ICON_LG} />}>
+          {(close) => (
+            <SmartArtPicker
+              onPick={(layout) => {
+                close();
+                insertSmartArt(editor, layout);
+              }}
+            />
+          )}
+        </Dropdown>
+        <Dropdown title="Diagrama" size="lg" label="Diagrama" trigger={<ChartColumnBig size={ICON_LG} />} panelClassName="we-gallery-popover">
+          {(close) => (
+            <ChartPicker
+              onPick={(type) => {
+                close();
+                insertChart(editor, type);
+              }}
+            />
+          )}
+        </Dropdown>
         <Btn title="Línea horizontal" size="lg" label="Línea" onClick={() => chain().setHorizontalRule().run()}>
           <Minus size={ICON_LG} />
         </Btn>
@@ -830,6 +870,43 @@ function InsertTab(props: RibbonProps) {
       </Group>
 
       <Group label="Texto">
+        <Btn title="Cuadro de texto" size="lg" label="Cuadro de texto" onClick={() => insertShape(editor, 'textBox')}>
+          <SquareDashedText size={ICON_LG} />
+        </Btn>
+        <Dropdown title="Galería de texto" size="lg" label="Galería de texto" trigger={<WholeWord size={ICON_LG} />}>
+          {(close) => (
+            <TextArtPicker
+              onPick={(style) => {
+                close();
+                insertTextArt(editor, style);
+              }}
+            />
+          )}
+        </Dropdown>
+        <Dropdown title="Letra capital" size="lg" label="Letra capital" active={!!s.dropCap} trigger={<CaseUpper size={ICON_LG} />}>
+          {(close) => (
+            <>
+              {(
+                [
+                  [null, 'Ninguna'],
+                  ['drop', 'En texto'],
+                  ['margin', 'En margen'],
+                ] as const
+              ).map(([value, label]) => (
+                <MenuItem
+                  key={label}
+                  active={s.dropCap === value}
+                  onSelect={() => {
+                    close();
+                    chain().setDropCap(value).run();
+                  }}
+                >
+                  {label}
+                </MenuItem>
+              ))}
+            </>
+          )}
+        </Dropdown>
         <Dropdown title="Fecha y hora" size="lg" label="Fecha y hora" trigger={<CalendarDays size={ICON_LG} />}>
           {(close) => (
             <>
@@ -853,6 +930,28 @@ function InsertTab(props: RibbonProps) {
       </Group>
 
       <Group label="Símbolos">
+        <Dropdown title="Ecuación" size="lg" label="Ecuación" trigger={<Sigma size={ICON_LG} />} align="right">
+          {(close) => (
+            <>
+              {EQUATIONS.map(([name, eq]) => (
+                <MenuItem
+                  key={name}
+                  hint={name}
+                  onSelect={() => {
+                    close();
+                    chain()
+                      .insertContent({ type: 'text', text: eq, marks: [{ type: 'italic' }, { type: 'textStyle', attrs: { fontFamily: 'Cambria Math, Cambria, serif' } }] })
+                      .unsetMark('italic')
+                      .unsetMark('textStyle')
+                      .run();
+                  }}
+                >
+                  <span className="we-eq">{eq}</span>
+                </MenuItem>
+              ))}
+            </>
+          )}
+        </Dropdown>
         <Dropdown title="Símbolo" size="lg" label="Símbolo" trigger={<Omega size={ICON_LG} />} align="right">
           {(close) => (
             <div className="we-symbols">
