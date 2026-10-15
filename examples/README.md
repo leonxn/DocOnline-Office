@@ -15,6 +15,7 @@ import { WordEditor } from 'doconline-office';
 | [03-guardar-en-api](03-guardar-en-api/) | Abrir y guardar en tu API (botón Guardar, Ctrl+S y autoguardado) + el Route Handler de Next.js que lo recibe. |
 | [04-solo-lectura](04-solo-lectura/VisorDocumento.tsx) | Mostrar un documento guardado sin poder editarlo (se puede imprimir, buscar y hacer zoom). |
 | [05-backend-nestjs](05-backend-nestjs/documentos.controller.ts) | Controlador NestJS y tabla PostgreSQL sugerida para guardar los documentos. |
+| [06-ia-servidor](06-ia-servidor/route.ts) | Servidor de IA para producción (Claude y Gemini): el editor usa `ai={{ endpoint: '/api/ia' }}` y las claves quedan en el servidor. |
 
 ## Probar un ejemplo en este repositorio
 

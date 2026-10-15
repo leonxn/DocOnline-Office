@@ -20,19 +20,18 @@ export interface PrintGeometry {
   usable: number;
   /** Clases extra para la raíz (p. ej. guiones automáticos). */
   rootClass?: string;
+  /** Estilos de la raíz (p. ej. el color de los títulos). */
+  rootStyle?: string;
 }
 
 const STYLE_ID = 'we-print-style';
 
-export function printSheets(geo: PrintGeometry, title: string) {
-  document.querySelector('.we-print-root')?.remove();
-  document.getElementById(STYLE_ID)?.remove();
-
-  const root = document.createElement('div');
-  root.className = `we-root we-print-root ${geo.rootClass ?? ''}`;
-  root.setAttribute('aria-hidden', 'true');
-
-  geo.sheets.forEach((sheet, i) => {
+/**
+ * Copia de cada hoja con su tramo de contenido (solo lectura). La usan la impresión y la
+ * vista "Múltiples páginas".
+ */
+export function buildSheetClones(geo: PrintGeometry): HTMLElement[] {
+  return geo.sheets.map((sheet, i) => {
     const page = sheet.cloneNode(true) as HTMLElement;
     page.className = `${sheet.className} we-print-sheet`.replace('is-current', '');
     page.removeAttribute('style');
@@ -42,6 +41,7 @@ export function printSheets(geo: PrintGeometry, title: string) {
     page.style.width = `${geo.sheetWidth}px`;
     page.style.height = `${geo.sheetHeight}px`;
     page.querySelectorAll('.we-vruler, .we-hf-tab, .we-hf-line').forEach((el) => el.remove());
+    page.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'));
 
     // Tramo del contenido de esta hoja: se recorta a la caja útil de la página
     const clip = document.createElement('div');
@@ -56,8 +56,19 @@ export function printSheets(geo: PrintGeometry, title: string) {
     flow.querySelectorAll('[data-resize-handle], .column-resize-handle, .ProseMirror-gapcursor').forEach((el) => el.remove());
     clip.appendChild(flow);
     page.appendChild(clip);
-    root.appendChild(page);
+    return page;
   });
+}
+
+export function printSheets(geo: PrintGeometry, title: string) {
+  document.querySelector('.we-print-root')?.remove();
+  document.getElementById(STYLE_ID)?.remove();
+
+  const root = document.createElement('div');
+  root.className = `we-root we-print-root ${geo.rootClass ?? ''}`;
+  root.setAttribute('aria-hidden', 'true');
+  if (geo.rootStyle) root.style.cssText = geo.rootStyle;
+  buildSheetClones(geo).forEach((page) => root.appendChild(page));
 
   const style = document.createElement('style');
   style.id = STYLE_ID;

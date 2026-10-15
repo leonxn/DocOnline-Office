@@ -29,6 +29,7 @@ import { WordEditor } from 'doconline-office';
 - [Probarlo en 1 minuto](#probarlo-en-1-minuto)
 - [Cómo implementarlo en tu proyecto](#cómo-implementarlo-en-tu-proyecto)
 - [Publicar una nueva versión en npm](#publicar-una-nueva-versión-en-npm)
+- [Herramientas de IA](#herramientas-de-ia)
 - [Guardar y abrir documentos](#guardar-y-abrir-documentos)
 - [Referencia del componente](#referencia-del-componente)
 - [Ejemplos](#ejemplos)
@@ -87,6 +88,20 @@ import { WordEditor } from 'doconline-office';
 - **Clic derecho** abre un menú con las acciones de tabla. Mayús + clic derecho abre el menú del
   navegador, con la ortografía.
 
+**Herramientas de IA (Claude o Gemini)**
+- **Chat de IA** en un panel lateral, con sugerencias rápidas: resumir, reescribir, simplificar,
+  ampliar, revisar, traducir, sugerir título, puntos clave…
+- **Acciones directas** sobre la selección (o todo el documento): Resumir, Reescribir (más
+  formal, más cercano, más corto o más largo), Traducir, Gramática y ortografía, y Generar
+  (resumen ejecutivo, puntos clave, títulos, revisión y tabla de contenido).
+- **Acciones rápidas propias:** cada usuario guarda sus instrucciones, por ejemplo «Redactar como
+  oficio».
+- Las respuestas llegan en tiempo real y se pueden **insertar** en el documento, **reemplazar**
+  la selección o **copiar**, conservando el formato (títulos, listas, negritas y tablas).
+- **Conexión:** cada usuario pega su clave de **Claude** (Opus 5.5, Sonnet 5.5 o Haiku 5.5) o
+  de **Gemini**, o la organización usa su propio servidor y la clave nunca llega al navegador.
+  Ver [Herramientas de IA](#herramientas-de-ia).
+
 **Cinta de opciones**
 - **Archivo:** nuevo, abrir (.docx, .html, .txt), guardar, descargar .docx o HTML, e imprimir o
   guardar como PDF.
@@ -98,12 +113,20 @@ import { WordEditor } from 'doconline-office';
   - galería de estilos.
 - **Insertar:** tabla, imagen (archivo, URL, pegar o arrastrar), vínculo, línea, salto de página,
   encabezado, pie, número de página, fecha y hora, código y símbolos.
-- **Disposición:**
+- **Diseño:**
   - márgenes, orientación, tamaño (A4, Carta, Oficio, A5), saltos y guiones automáticos;
   - sangrías y espaciado del párrafo;
+  - columnas (bloques de 2 o 3 columnas, o una angosta y una ancha);
+  - colores del documento (color de los títulos);
   - marca de agua y color de página.
 - **Revisar:** buscar y reemplazar, ortografía del navegador y conteo de palabras.
-- **Vista:** modo lectura, pantalla completa, regla, marcas ¶ y zoom.
+- **Vista:**
+  - panel de **Títulos** para navegar;
+  - zoom (lista y porcentaje), ajustar a la página, ajustar al ancho y 100 %;
+  - **Múltiples páginas**: todas las hojas en miniatura; un clic en una hoja lleva a ella;
+  - **tema claro u oscuro** (o según el sistema);
+  - mostrar u ocultar la cinta, la barra de estado, los paneles, las reglas y las marcas ¶;
+  - modo lectura y pantalla completa.
 
 **Salida**
 - **.docx** nativo, que conserva:
@@ -290,6 +313,54 @@ git push --follow-tags    # sube el commit y la etiqueta de la versión
 
 ---
 
+## Herramientas de IA
+
+La pestaña **Herramientas de IA** funciona con **Claude** (Anthropic) o **Gemini** (Google), y
+hay dos formas de conectarla:
+
+### A. Cada usuario usa su propia clave (sin configurar nada)
+
+Es el comportamiento por defecto. En *Herramientas de IA → Conectar*, el usuario:
+
+1. elige Claude o Gemini;
+2. pega su clave de API, que se crea en
+   [console.anthropic.com](https://console.anthropic.com/settings/keys) o
+   [aistudio.google.com](https://aistudio.google.com/apikey);
+3. el editor la verifica, sin gastar tokens, y la guarda **solo en su navegador**. Con
+   «Recordar» desmarcado, se borra al cerrar la pestaña.
+
+El uso se cobra a la cuenta de cada usuario. Sirve para herramientas internas o personales.
+
+### B. Tu servidor tiene la clave (recomendado en producción)
+
+```tsx
+<WordEditor ai={{ endpoint: '/api/ia' }} />
+```
+
+El editor envía a tu servidor `{ provider, model, system, messages }` y espera el texto en
+streaming. En [`examples/06-ia-servidor/route.ts`](examples/06-ia-servidor/route.ts) hay una
+ruta lista para Next.js. Usa los SDK oficiales `@anthropic-ai/sdk` y `@google/genai`, permite
+solo ciertos modelos y lee las claves de `ANTHROPIC_API_KEY` y `GEMINI_API_KEY`. Así las claves
+no salen del servidor y tú controlas quién usa la IA.
+
+| Opción de `ai` | Para |
+|---|---|
+| `endpoint` | URL de tu servidor de IA. |
+| `headers` | Cabeceras extra para tu servidor (por ejemplo, un token de sesión). |
+| `providers` | `['anthropic']`, `['gemini']` o ambos: qué ofrece tu servidor. |
+| `ai={false}` | Oculta la pestaña de IA. |
+
+**Detalles:**
+- Modelos de Claude: Opus 5.5 (predeterminado), Sonnet 5.5 y Haiku 5.5. Los de Gemini se listan
+  desde la cuenta del usuario al conectar.
+- Con Claude se activa el respaldo automático del servidor: si un modelo declina una solicitud
+  por sus políticas, Anthropic la reintenta con otro modelo compatible (Haiku no lo admite).
+- Los SDK de IA se cargan solo al usarlos, así que no pesan en la carga inicial del editor.
+- Con selección, se envía solo el texto seleccionado; sin selección, todo el documento. En el
+  chat se puede elegir.
+
+---
+
 ## Guardar y abrir documentos
 
 El editor entrega y recibe un **`WordDocument`**:
@@ -328,6 +399,7 @@ SQL sugerida.
 | `height` | `CSSProperties['height']` | Alto total del editor. Por defecto, `100%` del contenedor. |
 | `placeholder` | `string` | Texto guía con el documento vacío. |
 | `className` | `string` | Clase extra para la raíz. |
+| `ai` | `AiOptions \| false` | Herramientas de IA: sin valor = clave de cada usuario; `{ endpoint }` = tu servidor; `false` = ocultar. |
 | `ref` | `Ref<WordEditorHandle>` | Acceso a los métodos de abajo. |
 
 ### Métodos (`ref`)
@@ -365,6 +437,7 @@ En la carpeta [`examples/`](examples) hay casos listos para copiar. Importan des
 | [03-guardar-en-api](examples/03-guardar-en-api) | Abrir y guardar en una API (Guardar, Ctrl+S y autoguardado) + Route Handler. |
 | [04-solo-lectura](examples/04-solo-lectura/VisorDocumento.tsx) | Visor de documentos sin edición. |
 | [05-backend-nestjs](examples/05-backend-nestjs/documentos.controller.ts) | Backend NestJS y tabla PostgreSQL. |
+| [06-ia-servidor](examples/06-ia-servidor/route.ts) | Servidor de IA (Claude y Gemini) para producción: las claves no llegan al navegador. |
 
 ---
 
@@ -377,6 +450,7 @@ components/word-editor/     ← el componente (copia esta carpeta)
 ├── types.ts                WordDocument, PageSettings y tamaños de página
 ├── content-styles.ts       estilos del documento (pantalla, impresión y HTML)
 ├── word-editor.css         estilos de la interfaz (prefijo we-)
+├── ai/                     Herramientas de IA: Claude, Gemini, servidor propio, chat
 ├── extensions/             paginación, tablas, campos de página, párrafo, búsqueda…
 ├── io/                     .docx (exportar/importar), impresión y archivos
 └── ui/                     cinta de opciones, reglas, menú contextual, tablas…
@@ -413,6 +487,8 @@ docs/screenshots/           capturas del README
 | [docx](https://docx.js.org) | exportar a .docx | MIT |
 | [mammoth](https://github.com/mwilliamson/mammoth.js) | abrir .docx | BSD-2-Clause |
 | [lucide-react](https://lucide.dev) | íconos | ISC |
+| [@anthropic-ai/sdk](https://github.com/anthropics/anthropic-sdk-typescript) | IA con Claude | MIT |
+| [@google/genai](https://github.com/googleapis/js-genai) | IA con Gemini | Apache-2.0 |
 | [Next.js](https://nextjs.org) / React | demo | MIT |
 
 Este proyecto no contiene código de OnlyOffice ni de Microsoft Word: es una implementación

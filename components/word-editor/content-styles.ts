@@ -19,7 +19,7 @@ export const CONTENT_CSS = `
 .we-content p { margin: 0 0 8pt; min-height: 1em; }
 .we-content p[data-spacing="none"], .we-content h1[data-spacing="none"], .we-content h2[data-spacing="none"],
 .we-content h3[data-spacing="none"], .we-content h4[data-spacing="none"] { margin-bottom: 0; }
-.we-content h1, .we-content h2, .we-content h3, .we-content h4 { font-weight: 600; color: #1f3a5f; margin: 12pt 0 6pt; line-height: 1.2; }
+.we-content h1, .we-content h2, .we-content h3, .we-content h4 { font-weight: 600; color: var(--we-heading-color, #1f3a5f); margin: 12pt 0 6pt; line-height: 1.2; }
 .we-content h1 { font-size: 20pt; }
 .we-content h2 { font-size: 16pt; }
 .we-content h3 { font-size: 14pt; }

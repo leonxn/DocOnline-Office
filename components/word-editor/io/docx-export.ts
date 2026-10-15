@@ -511,6 +511,7 @@ export async function exportDocx(json: JSONContent, settings: PageSettings, titl
     footers[v] = (await make('footer', v)) as Footer;
   }
 
+  const headingColor = toHex(settings.themeColor) ?? '1F3A5F';
   const portrait = PAGE_SIZES[settings.size];
   const pageColor = toHex(settings.pageColor);
   const doc = new Document({
@@ -522,10 +523,10 @@ export async function exportDocx(json: JSONContent, settings: PageSettings, titl
     styles: {
       default: {
         document: { run: { font: DEFAULT_FONT, size: DEFAULT_FONT_SIZE * 2 }, paragraph: { spacing: { after: 160, line: 276 } } },
-        heading1: { run: { size: 40, bold: true, color: '1F3A5F' }, paragraph: { spacing: { before: 240, after: 120 } } },
-        heading2: { run: { size: 32, bold: true, color: '1F3A5F' }, paragraph: { spacing: { before: 240, after: 120 } } },
-        heading3: { run: { size: 28, bold: true, color: '1F3A5F' }, paragraph: { spacing: { before: 240, after: 120 } } },
-        heading4: { run: { size: 24, bold: true, italics: true, color: '1F3A5F' }, paragraph: { spacing: { before: 240, after: 120 } } },
+        heading1: { run: { size: 40, bold: true, color: headingColor }, paragraph: { spacing: { before: 240, after: 120 } } },
+        heading2: { run: { size: 32, bold: true, color: headingColor }, paragraph: { spacing: { before: 240, after: 120 } } },
+        heading3: { run: { size: 28, bold: true, color: headingColor }, paragraph: { spacing: { before: 240, after: 120 } } },
+        heading4: { run: { size: 24, bold: true, italics: true, color: headingColor }, paragraph: { spacing: { before: 240, after: 120 } } },
       },
     },
     numbering: { config: numberingConfig() },

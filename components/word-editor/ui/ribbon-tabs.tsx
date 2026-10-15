@@ -13,6 +13,8 @@ import {
   BetweenVerticalEnd,
   BetweenVerticalStart,
   CalendarDays,
+  Columns2,
+  Paintbrush2,
   Columns3,
   Frame,
   Grid3x3,
@@ -41,7 +43,7 @@ import {
 import { useEffect, useState } from 'react';
 import { TABLE_STYLES } from '../extensions/table-ext';
 import { INDENT_STEP_CM } from '../extensions/paragraph-format';
-import { MARGIN_PRESETS, PAGE_SIZES, isHeaderFooterEmpty, pageDimensions, type PageSizeId } from '../types';
+import { MARGIN_PRESETS, PAGE_SIZES, THEME_COLORS, isHeaderFooterEmpty, pageDimensions, type PageSizeId } from '../types';
 import { Btn, ColorPicker, Dropdown, Group, MenuItem, MenuSeparator, Row, TableGridPicker } from './controls';
 import { insertImageFile } from './image-utils';
 import type { RibbonProps } from './Ribbon';
@@ -336,13 +338,38 @@ export function HeaderFooterTab(props: RibbonProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Diseño
+// ---------------------------------------------------------------------------
+
+/** Bloques en columnas (tabla sin bordes, que en Word también se ve como columnas). */
+const COLUMN_LAYOUTS: { id: string; label: string; hint: string; widths: number[] }[] = [
+  { id: 'two', label: 'Dos columnas', hint: '½ · ½', widths: [1, 1] },
+  { id: 'three', label: 'Tres columnas', hint: '⅓ · ⅓ · ⅓', widths: [1, 1, 1] },
+  { id: 'left', label: 'Izquierda angosta', hint: '⅓ · ⅔', widths: [1, 2] },
+  { id: 'right', label: 'Derecha angosta', hint: '⅔ · ⅓', widths: [2, 1] },
+];
+
+function insertColumns(editor: Editor, ratios: number[], totalPx: number) {
+  editor
+    .chain()
+    .focus()
+    .insertTable({ rows: 1, cols: ratios.length, withHeaderRow: false })
+    .updateAttributes('table', { borders: 'none', tableStyle: 'plain' })
+    .run();
+  const info = currentTable(editor);
+  if (!info) return;
+  const sum = ratios.reduce((a, b) => a + b, 0);
+  setColumnWidths(editor, info, ratios.map((r) => (r / sum) * totalPx));
+}
+
+// ---------------------------------------------------------------------------
 // Disposición (Diseño en Word)
 // ---------------------------------------------------------------------------
 
 const WATERMARKS = ['CONFIDENCIAL', 'BORRADOR', 'URGENTE', 'COPIA', 'NO COPIAR'];
 
 export function LayoutTab(props: RibbonProps) {
-  const { editor, s, settings, onSettings } = props;
+  const { editor, s, settings, onSettings, contentWidthPx } = props;
   const m = settings.margins;
   const [custom, setCustom] = useState('');
   const defaultAfter = s.blockStyle === 'nospacing' ? 0 : 8;
@@ -404,6 +431,25 @@ export function LayoutTab(props: RibbonProps) {
             </>
           )}
         </Dropdown>
+        <Dropdown title="Columnas" size="lg" label="Columnas" trigger={<Columns2 size={ICON_LG} />}>
+          {(close) => (
+            <>
+              <div className="we-menu-title">Insertar bloque en columnas</div>
+              {COLUMN_LAYOUTS.map((c) => (
+                <MenuItem
+                  key={c.id}
+                  hint={c.hint}
+                  onSelect={() => {
+                    close();
+                    insertColumns(editor, c.widths, contentWidthPx);
+                  }}
+                >
+                  {c.label}
+                </MenuItem>
+              ))}
+            </>
+          )}
+        </Dropdown>
         <Dropdown title="Saltos" size="lg" label="Saltos" trigger={<SeparatorHorizontal size={ICON_LG} />}>
           {(close) => (
             <MenuItem hint="Ctrl+Enter" onSelect={() => { close(); editor.chain().focus().setPageBreak().run(); }}>
@@ -460,6 +506,43 @@ export function LayoutTab(props: RibbonProps) {
             onCommit={(v) => editor.commands.setParagraphSpaces({ spaceAfter: v })}
           />
         </div>
+      </Group>
+
+      <Group label="Diseño del documento">
+        <Dropdown
+          title="Colores de los títulos"
+          size="lg"
+          label="Colores"
+          trigger={
+            <span className="we-color-icon">
+              <Paintbrush2 size={ICON_LG} />
+              <span className="we-color-bar" style={{ background: settings.themeColor, width: 20 }} />
+            </span>
+          }
+        >
+          {(close) => (
+            <>
+              {THEME_COLORS.map((t) => (
+                <MenuItem
+                  key={t.id}
+                  active={settings.themeColor.toLowerCase() === t.color}
+                  icon={<span className="we-swatch" style={{ background: t.color, width: 14, height: 14 }} />}
+                  onSelect={() => {
+                    close();
+                    onSettings({ themeColor: t.color });
+                  }}
+                >
+                  {t.label}
+                </MenuItem>
+              ))}
+              <MenuSeparator />
+              <label className="we-menu-item we-custom-color">
+                <input type="color" value={settings.themeColor} onChange={(e) => onSettings({ themeColor: e.target.value })} aria-label="Color personalizado" />
+                Color personalizado…
+              </label>
+            </>
+          )}
+        </Dropdown>
       </Group>
 
       <Group label="Fondo de página">

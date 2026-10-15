@@ -18,11 +18,11 @@ export function safeFileName(title: string, ext: string) {
   return `${base}.${ext}`;
 }
 
-export function exportHtml(editor: Editor, title: string) {
+export function exportHtml(editor: Editor, title: string, headingColor = '#1f3a5f') {
   const html = standaloneHtml({
     title,
     body: editor.getHTML(),
-    extraCss: 'body { max-width: 21cm; margin: 2cm auto; padding: 0 1cm; }',
+    extraCss: `body { max-width: 21cm; margin: 2cm auto; padding: 0 1cm; } .we-content { --we-heading-color: ${headingColor}; }`,
   });
   downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), safeFileName(title, 'html'));
 }

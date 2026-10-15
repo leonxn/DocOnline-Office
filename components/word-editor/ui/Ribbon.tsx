@@ -13,6 +13,8 @@ import {
   CalendarDays,
   CaseSensitive,
   Check,
+  ChevronUp,
+  Pin,
   ClipboardPaste,
   Code,
   Columns3,
@@ -72,7 +74,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   DEFAULT_FONT,
   DEFAULT_FONT_SIZE,
@@ -87,13 +89,15 @@ import {
 } from '../types';
 import { Btn, ColorPicker, Combo, Dropdown, Group, MenuItem, MenuSeparator, Row, TableGridPicker } from './controls';
 import type { BlockStyle, EditorUiState } from './editor-state';
+import type { AiChat } from '../ai/useAiChat';
 import { insertImageFile } from './image-utils';
+import { AiTab, ViewTab } from './ribbon-ai-view';
 import { CustomTableForm, HeaderFooterMenus, HeaderFooterTab, LayoutTab, PageNumberMenu, TableTab } from './ribbon-tabs';
 
 export { insertImageFile };
 import { changeCase, fontSizeToPt } from './text-utils';
 
-export type RibbonTab = 'inicio' | 'insertar' | 'disposicion' | 'revisar' | 'vista' | 'tabla' | 'imagen' | 'encabezado';
+export type RibbonTab = 'inicio' | 'insertar' | 'disposicion' | 'revisar' | 'vista' | 'ia' | 'tabla' | 'imagen' | 'encabezado';
 
 export interface ViewOptions {
   zoom: number;
@@ -101,6 +105,15 @@ export interface ViewOptions {
   showMarks: boolean;
   spellcheck: boolean;
   readMode: boolean;
+  showStatusBar: boolean;
+  /** `false` = la cinta se oculta y solo aparece al hacer clic en una pestaña. */
+  ribbonPinned: boolean;
+  /** Panel de títulos (navegación). */
+  leftPanel: boolean;
+  /** Panel de Chat de IA. */
+  rightPanel: boolean;
+  multiPage: boolean;
+  theme: 'light' | 'dark' | 'system';
 }
 
 export interface RibbonActions {
@@ -113,6 +126,8 @@ export interface RibbonActions {
   openFind: (mode: 'find' | 'replace') => void;
   toggleFullscreen: () => void;
   fitWidth: () => void;
+  fitPage: () => void;
+  openAiConnect: () => void;
 }
 
 /** Dónde insertar el número de página. */
@@ -155,6 +170,8 @@ export interface RibbonProps {
   /** Muestra "Guardar" (onSave) además de "Descargar .docx". */
   hasSaveHandler: boolean;
   hf: HeaderFooterControls;
+  /** Chat de IA (null si el integrador desactivó la IA con `ai={false}`). */
+  ai: AiChat | null;
   /** Ancho útil de la página en px (para "ajustar tabla a la ventana" e imágenes). */
   contentWidthPx: number;
 }
@@ -163,31 +180,49 @@ const ICON = 16;
 const ICON_LG = 22;
 
 export function Ribbon(props: RibbonProps) {
-  const { s } = props;
-  const { hf } = props;
+  const { s, hf, view, onView, ai } = props;
   const [tab, setTab] = useState<RibbonTab>('inicio');
+  // Con la cinta oculta, el panel se muestra solo al hacer clic en una pestaña
+  const [peek, setPeek] = useState(false);
+  const ribbonRef = useRef<HTMLDivElement>(null);
+  const pinned = view.ribbonPinned;
+  const showPanel = pinned || peek;
+
   // Al entrar a editar el encabezado/pie se abre su pestaña (como en Word)
   const hfKind = hf.active?.kind ?? null;
   useEffect(() => {
     if (hfKind) setTab('encabezado');
   }, [hfKind]);
+
+  useEffect(() => {
+    if (pinned || !peek) return;
+    const onDown = (e: MouseEvent) => {
+      if (!ribbonRef.current?.contains(e.target as Node)) setPeek(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [pinned, peek]);
+
   // Si la pestaña contextual desaparece (salimos de la tabla), volvemos a Inicio
   const current =
-    (tab === 'tabla' && !s.inTable) || (tab === 'imagen' && !s.image) || (tab === 'encabezado' && !hf.active) ? 'inicio' : tab;
+    (tab === 'tabla' && !s.inTable) || (tab === 'imagen' && !s.image) || (tab === 'encabezado' && !hf.active) || (tab === 'ia' && !ai)
+      ? 'inicio'
+      : tab;
 
   const tabs: { id: RibbonTab; label: string; contextual?: boolean }[] = [
     { id: 'inicio', label: 'Inicio' },
     { id: 'insertar', label: 'Insertar' },
-    { id: 'disposicion', label: 'Disposición' },
+    { id: 'disposicion', label: 'Diseño' },
     { id: 'revisar', label: 'Revisar' },
     { id: 'vista', label: 'Vista' },
+    ...(ai ? [{ id: 'ia' as const, label: 'Herramientas de IA' }] : []),
     ...(hf.active ? [{ id: 'encabezado' as const, label: 'Encabezado y pie', contextual: true }] : []),
     ...(s.inTable ? [{ id: 'tabla' as const, label: 'Tabla', contextual: true }] : []),
     ...(s.image ? [{ id: 'imagen' as const, label: 'Imagen', contextual: true }] : []),
   ];
 
   return (
-    <div className="we-ribbon">
+    <div className={`we-ribbon ${pinned ? '' : 'is-floating'}`} ref={ribbonRef}>
       <div className="we-tabs" role="tablist" aria-label="Cinta de opciones">
         <FileMenu {...props} />
         {tabs.map((t) => (
@@ -196,24 +231,44 @@ export function Ribbon(props: RibbonProps) {
             type="button"
             role="tab"
             aria-selected={current === t.id}
-            className={`we-tab ${current === t.id ? 'is-active' : ''} ${t.contextual ? 'is-contextual' : ''}`}
+            className={`we-tab ${current === t.id && showPanel ? 'is-active' : ''} ${t.contextual ? 'is-contextual' : ''}`}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              if (!pinned) setPeek(current === t.id ? !peek : true);
+              setTab(t.id);
+            }}
           >
             {t.label}
           </button>
         ))}
+        <span className="we-tabs-spacer" />
+        <button
+          type="button"
+          className="we-icon-btn we-ribbon-pin"
+          aria-label={pinned ? 'Ocultar la cinta de opciones' : 'Fijar la cinta de opciones'}
+          data-tip={pinned ? 'Ocultar la cinta' : 'Fijar la cinta'}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            onView({ ribbonPinned: !pinned });
+            setPeek(false);
+          }}
+        >
+          {pinned ? <ChevronUp size={16} /> : <Pin size={15} />}
+        </button>
       </div>
-      <div className="we-panel" role="tabpanel">
-        {current === 'inicio' && <HomeTab {...props} />}
-        {current === 'insertar' && <InsertTab {...props} />}
-        {current === 'disposicion' && <LayoutTab {...props} />}
-        {current === 'revisar' && <ReviewTab {...props} />}
-        {current === 'vista' && <ViewTab {...props} />}
-        {current === 'tabla' && <TableTab {...props} />}
-        {current === 'imagen' && <ImageTab {...props} />}
-        {current === 'encabezado' && <HeaderFooterTab {...props} />}
-      </div>
+      {showPanel && (
+        <div className="we-panel" role="tabpanel" onClick={() => !pinned && current !== 'vista' && setTimeout(() => setPeek(false), 0)}>
+          {current === 'inicio' && <HomeTab {...props} />}
+          {current === 'insertar' && <InsertTab {...props} />}
+          {current === 'disposicion' && <LayoutTab {...props} />}
+          {current === 'revisar' && <ReviewTab {...props} />}
+          {current === 'vista' && <ViewTab {...props} />}
+          {current === 'ia' && <AiTab {...props} />}
+          {current === 'tabla' && <TableTab {...props} />}
+          {current === 'imagen' && <ImageTab {...props} />}
+          {current === 'encabezado' && <HeaderFooterTab {...props} />}
+        </div>
+      )}
     </div>
   );
 }
@@ -867,59 +922,6 @@ function ReviewTab({ editor, s, view, onView, actions }: RibbonProps) {
             </dl>
           )}
         </Dropdown>
-      </Group>
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Vista
-// ---------------------------------------------------------------------------
-
-function ViewTab({ view, onView, actions }: RibbonProps) {
-  return (
-    <>
-      <Group label="Vistas">
-        <Btn
-          title="Modo lectura"
-          size="lg"
-          label="Modo lectura"
-          active={view.readMode}
-          onClick={() => onView({ readMode: !view.readMode })}
-        >
-          <BookOpen size={ICON_LG} />
-        </Btn>
-        <Btn title="Pantalla completa" size="lg" label="Pantalla completa" onClick={actions.toggleFullscreen}>
-          <Maximize2 size={ICON_LG} />
-        </Btn>
-      </Group>
-      <Group label="Mostrar">
-        <Btn title="Regla" size="lg" label="Regla" active={view.showRuler} onClick={() => onView({ showRuler: !view.showRuler })}>
-          <RulerIcon size={ICON_LG} />
-        </Btn>
-        <Btn
-          title="Marcas de formato"
-          size="lg"
-          label="Marcas ¶"
-          active={view.showMarks}
-          onClick={() => onView({ showMarks: !view.showMarks })}
-        >
-          <Eye size={ICON_LG} />
-        </Btn>
-      </Group>
-      <Group label="Zoom">
-        <Btn title="Alejar" size="lg" label="Alejar" onClick={() => onView({ zoom: Math.max(0.25, +(view.zoom - 0.1).toFixed(2)) })}>
-          <ZoomOut size={ICON_LG} />
-        </Btn>
-        <Btn title="100 %" size="lg" label="100 %" onClick={() => onView({ zoom: 1 })}>
-          <span className="we-zoom-badge">1:1</span>
-        </Btn>
-        <Btn title="Acercar" size="lg" label="Acercar" onClick={() => onView({ zoom: Math.min(3, +(view.zoom + 0.1).toFixed(2)) })}>
-          <ZoomIn size={ICON_LG} />
-        </Btn>
-        <Btn title="Ajustar al ancho" size="lg" label="Ancho de página" onClick={actions.fitWidth}>
-          <Columns3 size={ICON_LG} />
-        </Btn>
       </Group>
     </>
   );

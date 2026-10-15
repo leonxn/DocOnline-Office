@@ -41,6 +41,8 @@ export interface PageSettings {
   watermark: string;
   /** Separación automática de palabras con guiones. */
   hyphenation: boolean;
+  /** Color de los títulos del documento (Diseño → Colores). */
+  themeColor: string;
 }
 
 /** Clave de `PageSettings` que guarda cada encabezado/pie. */
@@ -102,7 +104,20 @@ export const DEFAULT_SETTINGS: PageSettings = {
   pageColor: null,
   watermark: '',
   hyphenation: false,
+  themeColor: '#1f3a5f',
 };
+
+/** Paletas de Diseño → Colores (color de los títulos). */
+export const THEME_COLORS: { id: string; label: string; color: string }[] = [
+  { id: 'institucional', label: 'Azul institucional', color: '#1f3a5f' },
+  { id: 'azul', label: 'Azul', color: '#1d5fc4' },
+  { id: 'verde', label: 'Verde', color: '#1d6b40' },
+  { id: 'vino', label: 'Vino', color: '#7b1e2b' },
+  { id: 'morado', label: 'Morado', color: '#5b2c83' },
+  { id: 'naranja', label: 'Naranja', color: '#b4541a' },
+  { id: 'gris', label: 'Escala de grises', color: '#3b4048' },
+  { id: 'negro', label: 'Negro', color: '#000000' },
+];
 
 /** Convierte texto plano (formato antiguo) en contenido de encabezado/pie. */
 export function textToHeaderFooter(text: string, align: 'left' | 'center' | 'right' = 'center'): HeaderFooterContent {

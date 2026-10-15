@@ -20,7 +20,9 @@ import { CONTENT_CSS } from './content-styles';
 import { buildExtensions } from './extensions';
 import { INDENT_STEP_CM } from './extensions/paragraph-format';
 import { downloadBlob, exportHtml, importFile, safeFileName } from './io/files';
-import { printSheets } from './io/print';
+import { printSheets, type PrintGeometry } from './io/print';
+import { useAiChat } from './ai/useAiChat';
+import type { AiOptions } from './ai/types';
 import {
   DEFAULT_SETTINGS,
   HeaderFooterContent,
@@ -34,11 +36,15 @@ import {
   textToHeaderFooter,
   variantForPage,
 } from './types';
+import { AiConnectDialog } from './ui/AiConnectDialog';
+import { AiPanel } from './ui/AiPanel';
 import { ContextMenu } from './ui/ContextMenu';
 import { Btn } from './ui/controls';
 import { selectEditorState } from './ui/editor-state';
 import { FindReplace } from './ui/FindReplace';
 import { HeaderFooterEditor, StaticHeaderFooter } from './ui/HeaderFooter';
+import { MultiPageView } from './ui/MultiPageView';
+import { NavigationPanel } from './ui/NavigationPanel';
 import { Ribbon, insertImageFile, type HeaderFooterControls, type PageNumberPosition, type RibbonActions, type ViewOptions } from './ui/Ribbon';
 import { Ruler, VerticalRuler } from './ui/Ruler';
 import { StatusBar } from './ui/StatusBar';
@@ -68,6 +74,11 @@ export interface WordEditorProps {
   height?: CSSProperties['height'];
   /** Oculta la barra superior con el título (útil dentro de formularios). */
   hideTitleBar?: boolean;
+  /**
+   * Herramientas de IA (Claude o Gemini). Por defecto cada usuario conecta su propia clave.
+   * Pasa `{ endpoint: '/api/ia' }` para usar tu servidor, o `false` para ocultar la pestaña.
+   */
+  ai?: false | AiOptions;
   className?: string;
 }
 
@@ -179,13 +190,37 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
     height = '100%',
     hideTitleBar = false,
     className = '',
+    ai,
   },
   ref,
 ) {
   const initial = useMemo(() => normalize(initialValue), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [title, setTitle] = useState(initial.title);
   const [settings, setSettings] = useState<PageSettings>(initial.settings);
-  const [view, setView] = useState<ViewOptions>({ zoom: 1, showRuler: true, showMarks: false, spellcheck: true, readMode: false });
+  const [view, setView] = useState<ViewOptions>({
+    zoom: 1,
+    showRuler: true,
+    showMarks: false,
+    spellcheck: true,
+    readMode: false,
+    showStatusBar: true,
+    ribbonPinned: true,
+    leftPanel: false,
+    rightPanel: false,
+    multiPage: false,
+    theme: 'light',
+  });
+  const [aiConnectOpen, setAiConnectOpen] = useState(false);
+  const [systemDark, setSystemDark] = useState(false);
+  useEffect(() => {
+    if (view.theme !== 'system' || typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setSystemDark(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [view.theme]);
+  const theme = view.theme === 'system' ? (systemDark ? 'dark' : 'light') : view.theme;
   const [find, setFind] = useState<'find' | 'replace' | null>(null);
   const [painter, setPainter] = useState<readonly Mark[] | null>(null);
   const [toast, setToast] = useState<string>();
@@ -265,6 +300,14 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
   // La cinta actúa sobre el encabezado/pie mientras se edita (como en Word)
   const activeEditor = hfEdit && hfEditor ? hfEditor : editor;
   const s = hfEdit && hfEditor ? sHf : sMain;
+
+  // --- Herramientas de IA
+  const aiOptions: AiOptions | null = ai === false ? null : (ai ?? {});
+  const activeEditorRef = useRef<Editor | null>(null);
+  activeEditorRef.current = activeEditor;
+  const getActiveEditor = useCallback(() => activeEditorRef.current, []);
+  const aiChat = useAiChat(getActiveEditor, aiOptions ?? {});
+  const chat = aiOptions ? aiChat : null;
 
   // Título y configuración de página también disparan onChange
   const firstRender = useRef(true);
@@ -362,8 +405,17 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
         const dom = editor.view.dom;
         const rect = dom.getBoundingClientRect();
         const scale = rect.height / (dom.offsetHeight || 1) || 1;
-        const top = (editor.view.coordsAtPos(editor.state.selection.head).top - rect.top) / scale;
-        setPage(Math.max(1, Math.floor(top / pitch) + 1));
+        const { head, $head } = editor.state.selection;
+        let coords = editor.view.coordsAtPos(head, 1);
+        // Justo después de un corte de página dentro de un párrafo, la posición "pertenece" al
+        // final de la línea anterior; se usa el carácter siguiente (que está en la hoja nueva)
+        if ($head.parent.isTextblock && $head.parentOffset < $head.parent.content.size) {
+          const next = editor.view.coordsAtPos(head + 1, -1);
+          if (next.top - coords.top > pitch * scale * 0.25) coords = next;
+        }
+        const top = (coords.top - rect.top) / scale;
+        // +2 px: el cursor al inicio de una hoja cae justo en el borde y el redondeo lo dejaría en la anterior
+        setPage(Math.max(1, Math.floor((top + 2) / pitch) + 1));
       } catch {
         // coordsAtPos falla si el editor aún no está en el DOM
       }
@@ -526,6 +578,7 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
         contentWidth,
         usable: usablePx,
         rootClass: settings.hyphenation ? 'is-hyphenated' : '',
+        rootStyle: `--we-heading-color: ${settings.themeColor}`,
       },
       title,
     );
@@ -554,6 +607,45 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
     if (canvasRef.current.clientWidth < sheetW + 100) fitWidth();
   }, [editor, sheetW, fitWidth]);
 
+  const fitPage = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const zoom = Math.min((canvas.clientHeight - 60) / sheetH, (canvas.clientWidth - 100) / sheetW);
+    setView((v) => ({ ...v, zoom: Math.max(0.25, Math.min(3, +zoom.toFixed(2))) }));
+  }, [sheetH, sheetW]);
+
+  /** Foto de las hojas para la vista "Múltiples páginas". */
+  const multiPageGeometry = useCallback((): PrintGeometry | null => {
+    if (!editor || !sheetsRef.current) return null;
+    return {
+      sheets: Array.from(sheetsRef.current.querySelectorAll<HTMLElement>('.we-sheet')),
+      content: editor.view.dom,
+      pitch,
+      sheetWidth: sheetW,
+      sheetHeight: sheetH,
+      contentLeft,
+      contentTop: effTop,
+      contentWidth,
+      usable: usablePx,
+    };
+  }, [editor, pitch, sheetW, sheetH, contentLeft, effTop, contentWidth, usablePx]);
+
+  const goToSheet = useCallback(
+    (index: number) => {
+      setView((v) => ({ ...v, multiPage: false }));
+      // Esperar a que se cierre la vista de miniaturas (si no, el punto cae sobre ella)
+      window.setTimeout(() => {
+        const sheet = sheetsRef.current?.querySelectorAll<HTMLElement>('.we-sheet')[index];
+        sheet?.scrollIntoView({ block: 'start' });
+        if (!editor || !sheet) return;
+        const r = sheet.getBoundingClientRect();
+        const pos = editor.view.posAtCoords({ left: r.left + r.width / 2, top: r.top + (effTop + 10) * (r.height / sheetH) });
+        if (pos) editor.chain().focus().setTextSelection(pos.pos).run();
+      }, 60);
+    },
+    [editor, effTop, sheetH],
+  );
+
   const actions: RibbonActions = {
     newDocument: () => {
       if (!editor) return;
@@ -567,7 +659,7 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
     openFile: () => fileInputRef.current?.click(),
     save,
     saveDocx,
-    exportHtml: () => editor && exportHtml(editor, title),
+    exportHtml: () => editor && exportHtml(editor, title, settings.themeColor),
     print,
     openFind: setFind,
     toggleFullscreen: () => {
@@ -575,6 +667,8 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
       else rootRef.current?.requestFullscreen?.();
     },
     fitWidth,
+    fitPage,
+    openAiConnect: () => setAiConnectOpen(true),
   };
 
   const onOpenFile = async (file: File) => {
@@ -733,7 +827,8 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
     <div
       ref={rootRef}
       className={`we-root ${view.showMarks ? 'show-marks' : ''} ${settings.hyphenation ? 'is-hyphenated' : ''} ${className}`}
-      style={{ height }}
+      data-theme={theme}
+      style={{ height, '--we-heading-color': settings.themeColor } as CSSProperties}
       onKeyDown={onKeyDown}
     >
       <style>{CONTENT_CSS}</style>
@@ -787,13 +882,26 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
           notify={notify}
           hasSaveHandler={!!onSave}
           hf={hfControls}
+          ai={chat}
           contentWidthPx={contentWidth}
         />
       )}
 
       <div className="we-workspace">
+        {editor && view.leftPanel && <NavigationPanel editor={editor} onClose={() => setView((v) => ({ ...v, leftPanel: false }))} />}
+
+        <div className="we-center">
         {editor && sMain && find && (
           <FindReplace editor={editor} s={sMain} mode={find} onMode={setFind} onClose={() => setFind(null)} />
+        )}
+        {view.multiPage && (
+          <MultiPageView
+            geometry={multiPageGeometry}
+            sheetWidth={sheetW}
+            sheetHeight={sheetH}
+            onPick={goToSheet}
+            onClose={() => setView((v) => ({ ...v, multiPage: false }))}
+          />
         )}
 
         <div className="we-canvas" ref={canvasRef}>
@@ -935,9 +1043,24 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
             </div>
           </div>
         </div>
+        </div>
+
+        {chat && activeEditor && view.rightPanel && !readOnly && (
+          <AiPanel
+            chat={chat}
+            editor={activeEditor}
+            notify={notify}
+            onConnect={() => setAiConnectOpen(true)}
+            onClose={() => setView((v) => ({ ...v, rightPanel: false }))}
+          />
+        )}
       </div>
 
-      {sMain && (
+      {chat && aiOptions && aiConnectOpen && (
+        <AiConnectDialog chat={chat} options={aiOptions} onClose={() => setAiConnectOpen(false)} />
+      )}
+
+      {sMain && view.showStatusBar && (
         <StatusBar
           s={sMain}
           page={Math.min(page, pages)}
