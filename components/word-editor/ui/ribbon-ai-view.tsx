@@ -27,7 +27,7 @@ import { useState } from 'react';
 import { ACTIONS, LANGUAGES, translateAction, type QuickAction } from '../ai/prompts';
 import { loadCustomActions, saveCustomActions } from '../ai/storage';
 import { PROVIDER_LABEL } from '../ai/types';
-import { Btn, Combo, Dropdown, Group, MenuItem, MenuSeparator, Row } from './controls';
+import { Btn, Combo, Dropdown, Group, MenuItem, MenuSeparator, MiniForm, Row } from './controls';
 import type { RibbonProps } from './Ribbon';
 import { Check } from './ribbon-tabs';
 
@@ -82,10 +82,9 @@ function CustomActionForm({ onSave }: { onSave: (action: QuickAction) => void })
   const [prompt, setPrompt] = useState('');
   const [transforms, setTransforms] = useState(true);
   return (
-    <form
+    <MiniForm
       className="we-inline-form"
-      onSubmit={(e) => {
-        e.preventDefault();
+      onSubmit={() => {
         if (!name.trim() || !prompt.trim()) return;
         onSave({ id: `custom-${Date.now()}`, label: name.trim().slice(0, 40), prompt: prompt.trim().slice(0, 2000), transforms });
         setName('');
@@ -109,9 +108,9 @@ function CustomActionForm({ onSave }: { onSave: (action: QuickAction) => void })
       </label>
       <Check label="El resultado reemplaza al texto seleccionado" checked={transforms} onChange={setTransforms} />
       <div className="we-inline-actions">
-        <button type="submit" className="we-primary">Guardar acción</button>
+        <button type="button" data-submit className="we-primary">Guardar acción</button>
       </div>
-    </form>
+    </MiniForm>
   );
 }
 

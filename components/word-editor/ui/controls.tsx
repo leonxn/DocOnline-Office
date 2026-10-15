@@ -384,3 +384,36 @@ export function TableGridPicker({ onPick }: { onPick: (rows: number, cols: numbe
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Mini formulario de los menús (sin <form>: el editor puede estar dentro del formulario
+// de la aplicación, y un <form> anidado enviaría ese formulario con Enter)
+// ---------------------------------------------------------------------------
+
+export function MiniForm({ className, onSubmit, children }: { className?: string; onSubmit: () => void; children: ReactNode }) {
+  const latest = useRef(onSubmit);
+  latest.current = onSubmit;
+  // Después del render, para usar los valores recién escritos
+  const submit = () => setTimeout(() => latest.current(), 0);
+  return (
+    <div
+      role="form"
+      className={className}
+      onKeyDown={(e) => {
+        const t = e.target as HTMLInputElement;
+        if (e.key === 'Enter' && t.tagName === 'INPUT' && t.type !== 'checkbox') {
+          e.preventDefault();
+          submit();
+        }
+      }}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest('[data-submit]')) {
+          e.preventDefault();
+          submit();
+        }
+      }}
+    >
+      {children}
+    </div>
+  );
+}

@@ -94,7 +94,7 @@ import {
   pageDimensions,
   type HeaderFooterKind,
 } from '../types';
-import { Btn, ColorPicker, Combo, Dropdown, Group, MenuItem, MenuSeparator, Row, TableGridPicker } from './controls';
+import { Btn, ColorPicker, Combo, Dropdown, Group, MenuItem, MenuSeparator, MiniForm, Row, TableGridPicker } from './controls';
 import type { BlockStyle, EditorUiState } from './editor-state';
 import type { AiChat } from '../ai/useAiChat';
 import { insertImageFile } from './image-utils';
@@ -128,6 +128,7 @@ export interface RibbonActions {
   openFile: () => void;
   save: () => void;
   saveDocx: () => void;
+  savePdf: () => void;
   exportHtml: () => void;
   print: () => void;
   openFind: (mode: 'find' | 'replace') => void;
@@ -303,6 +304,7 @@ function FileMenu({ actions, hasSaveHandler }: RibbonProps) {
             <MenuItem icon={<FileDown size={ICON} />} hint={hasSaveHandler ? undefined : 'Ctrl+S'} onSelect={run(actions.saveDocx)}>
               Descargar como Word (.docx)
             </MenuItem>
+            <MenuItem icon={<FileDown size={ICON} />} onSelect={run(actions.savePdf)}>Descargar como PDF</MenuItem>
             <MenuItem icon={<FileCode size={ICON} />} onSelect={run(actions.exportHtml)}>Descargar como HTML</MenuItem>
             <MenuItem icon={<Printer size={ICON} />} hint="Ctrl+P" onSelect={run(actions.print)}>Imprimir o guardar como PDF…</MenuItem>
           </>
@@ -707,10 +709,9 @@ export function InlineForm({
 }) {
   const [value, setValue] = useState(initial);
   return (
-    <form
+    <MiniForm
       className="we-inline-form"
-      onSubmit={(e) => {
-        e.preventDefault();
+      onSubmit={() => {
         onSubmit(value.trim());
       }}
     >
@@ -720,9 +721,9 @@ export function InlineForm({
       </label>
       <div className="we-inline-actions">
         {extra}
-        <button type="submit" className="we-primary">{submitLabel}</button>
+        <button type="button" data-submit className="we-primary">{submitLabel}</button>
       </div>
-    </form>
+    </MiniForm>
   );
 }
 

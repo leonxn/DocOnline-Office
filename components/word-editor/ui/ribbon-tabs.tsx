@@ -44,7 +44,7 @@ import { useEffect, useState } from 'react';
 import { TABLE_STYLES } from '../extensions/table-ext';
 import { INDENT_STEP_CM } from '../extensions/paragraph-format';
 import { MARGIN_PRESETS, PAGE_SIZES, THEME_COLORS, isHeaderFooterEmpty, pageDimensions, type PageSizeId } from '../types';
-import { Btn, ColorPicker, Dropdown, Group, MenuItem, MenuSeparator, Row, TableGridPicker } from './controls';
+import { Btn, ColorPicker, Dropdown, Group, MenuItem, MenuSeparator, MiniForm, Row, TableGridPicker } from './controls';
 import { insertImageFile } from './image-utils';
 import type { RibbonProps } from './Ribbon';
 import { currentTable, distributeColumns, scaleTableTo, selectRowOrColumn, selectTable, setColumnWidths } from './table-utils';
@@ -125,10 +125,9 @@ export function CustomTableForm({ onInsert }: { onInsert: (rows: number, cols: n
   const [cols, setCols] = useState(3);
   const [header, setHeader] = useState(true);
   return (
-    <form
+    <MiniForm
       className="we-inline-form we-table-form"
-      onSubmit={(e) => {
-        e.preventDefault();
+      onSubmit={() => {
         onInsert(Math.min(100, Math.max(1, rows)), Math.min(30, Math.max(1, cols)), header);
       }}
     >
@@ -139,9 +138,9 @@ export function CustomTableForm({ onInsert }: { onInsert: (rows: number, cols: n
       </div>
       <Check label="Primera fila como encabezado" checked={header} onChange={setHeader} />
       <div className="we-inline-actions">
-        <button type="submit" className="we-primary">Insertar</button>
+        <button type="button" data-submit className="we-primary">Insertar</button>
       </div>
-    </form>
+    </MiniForm>
   );
 }
 
@@ -558,10 +557,9 @@ export function LayoutTab(props: RibbonProps) {
                 </MenuItem>
               ))}
               <MenuSeparator />
-              <form
+              <MiniForm
                 className="we-inline-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
+                onSubmit={() => {
                   close();
                   onSettings({ watermark: custom.trim().slice(0, 40) });
                 }}
@@ -571,9 +569,9 @@ export function LayoutTab(props: RibbonProps) {
                   <input value={custom} maxLength={40} placeholder="Ej.: RESERVADO" onChange={(e) => setCustom(e.target.value)} />
                 </label>
                 <div className="we-inline-actions">
-                  <button type="submit" className="we-primary">Aplicar</button>
+                  <button type="button" data-submit className="we-primary">Aplicar</button>
                 </div>
-              </form>
+              </MiniForm>
             </>
           )}
         </Dropdown>

@@ -3,7 +3,7 @@
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
 import { NodeSelection } from '@tiptap/pm/state';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { GRAPHIC_EDIT_EVENT, graphicBoxStyle, normalizeGraphic, renderGraphicSvg, rotatedBox, type GraphicData, type GraphicEditDetail } from './render';
+import { GRAPHIC_EDIT_EVENT, graphicBoxStyle, normalizeGraphic, openChartEditor, renderGraphicSvg, rotatedBox, type GraphicData, type GraphicEditDetail } from './render';
 import { SHAPE_BY_ID } from './shapes';
 import { PT_PX } from './svg';
 import type { GraphicType, ShapeAttrs } from './types';
@@ -154,6 +154,11 @@ export function GraphicView({ node, selected, editor, getPos }: NodeViewProps) {
   };
 
   const onDoubleClick = (e: React.MouseEvent) => {
+    if (editable && gtype === 'chart') {
+      const p = pos();
+      if (p != null) openChartEditor(editor.view.dom as HTMLElement, p);
+      return;
+    }
     if (!editable || gtype !== 'shape' || isLine) return;
     e.preventDefault();
     setEditing((data as ShapeAttrs).text ?? '');
@@ -242,6 +247,30 @@ export function GraphicView({ node, selected, editor, getPos }: NodeViewProps) {
         )}
       </div>
       </div>
+      {showHandles && gtype === 'chart' && (
+        <button
+          type="button"
+          className="we-gfx-chart-btn"
+          aria-label="Editar datos del gráfico"
+          title="Editar datos del gráfico"
+          contentEditable={false}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={() => {
+            const p = pos();
+            if (p != null) openChartEditor(editor.view.dom as HTMLElement, p);
+          }}
+          style={{ left: (frame.width + live.width) / 2 + 10 }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+            <path d="M7 16v-4M11 16V8M15 16v-6" />
+            <path d="m17.5 4.5 2 2L14 12h-2v-2z" />
+          </svg>
+        </button>
+      )}
       {draft && 'width' in draft && (
         <span className="we-gfx-size">
           {(live.width * 2.54 / 96).toFixed(2)} × {(live.height * 2.54 / 96).toFixed(2)} cm

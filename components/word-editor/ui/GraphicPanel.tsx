@@ -13,17 +13,16 @@ import {
   FoldVertical,
   Italic,
   Lock,
-  Minus,
   PanelRightClose,
-  Plus,
   RotateCcw,
   RotateCw,
+  Sheet,
   Trash2,
   Unlock,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { seriesColor } from '../graphics/charts';
-import type { GraphicData } from '../graphics/render';
+import { openChartEditor, type GraphicData } from '../graphics/render';
 import { SHAPE_BY_ID } from '../graphics/shapes';
 import {
   CHART_TYPES,
@@ -307,15 +306,31 @@ function ShapeSettings({ d, set }: { d: ShapeAttrs; set: (p: Record<string, unkn
 // Gráfico
 // ---------------------------------------------------------------------------
 
-function ChartSettings({ d, set }: { d: ChartAttrs; set: (p: Record<string, unknown>) => void }) {
-  const nCat = d.categories.length;
-  const setValue = (si: number, ci: number, raw: string) => {
-    const v = parseFloat(raw.replace(',', '.'));
-    const series = d.series.map((s, i) => (i === si ? { ...s, values: d.categories.map((_, k) => (k === ci ? (Number.isFinite(v) ? v : 0) : s.values[k] ?? 0)) } : s));
-    set({ series });
-  };
+function ChartSettings({ d, set, onEditData }: { d: ChartAttrs; set: (p: Record<string, unknown>) => void; onEditData: () => void }) {
   return (
     <>
+      <Section title="Datos del gráfico">
+        <button type="button" className="we-gp-primary" onClick={onEditData}>
+          <Sheet size={15} /> Editar datos
+        </button>
+        <div className="we-gp-series-list">
+          {d.series.map((s, si) => (
+            <label key={si} className="we-gp-series-item" title={`Color de ${s.name}`}>
+              <input type="color" aria-label={`Color de ${s.name}`} value={seriesColor(d, si)} onChange={(e) => set({ series: d.series.map((x, i) => (i === si ? { ...x, color: e.target.value } : x)) })} />
+              <span>{s.name}</span>
+            </label>
+          ))}
+        </div>
+        <p className="we-gp-hint">
+          {d.chartType === 'pie' || d.chartType === 'doughnut'
+            ? 'El gráfico circular usa la primera serie.'
+            : d.chartType === 'scatter'
+              ? 'En dispersión, la columna A son los valores X.'
+              : d.chartType === 'combo'
+                ? 'La última serie se dibuja como línea.'
+                : 'También puedes hacer doble clic en el gráfico.'}
+        </p>
+      </Section>
       <Section title="Tipo de gráfico">
         <select value={d.chartType} onChange={(e) => set({ chartType: e.target.value as ChartType })}>
           {Array.from(new Set(CHART_TYPES.map((t) => t.group))).map((g) => (
@@ -333,61 +348,52 @@ function ChartSettings({ d, set }: { d: ChartAttrs; set: (p: Record<string, unkn
         <label className="we-check"><input type="checkbox" checked={d.showValues} onChange={(e) => set({ showValues: e.target.checked })} /> Etiquetas de datos</label>
         <label className="we-check"><input type="checkbox" checked={d.showGrid} onChange={(e) => set({ showGrid: e.target.checked })} /> Líneas de cuadrícula</label>
       </Section>
-      <Section title="Datos">
-        <div className="we-gp-grid-wrap">
-          <table className="we-gp-grid">
-            <thead>
-              <tr>
-                <th />
-                {d.series.map((s, si) => (
-                  <th key={si}>
-                    <span className="we-gp-series">
-                      <input type="color" aria-label={`Color de ${s.name}`} value={seriesColor(d, si)} onChange={(e) => set({ series: d.series.map((x, i) => (i === si ? { ...x, color: e.target.value } : x)) })} />
-                      <input type="text" aria-label="Nombre de la serie" value={s.name} onChange={(e) => set({ series: d.series.map((x, i) => (i === si ? { ...x, name: e.target.value } : x)) })} />
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {d.categories.map((c, ci) => (
-                <tr key={ci}>
-                  <th>
-                    <input type="text" aria-label="Categoría" value={c} onChange={(e) => set({ categories: d.categories.map((x, i) => (i === ci ? e.target.value : x)) })} />
-                  </th>
-                  {d.series.map((s, si) => (
-                    <td key={si}>
-                      <input type="text" inputMode="decimal" aria-label={`${s.name}, ${c}`} defaultValue={String(s.values[ci] ?? 0).replace('.', ',')} key={`${si}-${ci}-${s.values[ci]}`} onBlur={(e) => setValue(si, ci, e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setValue(si, ci, e.currentTarget.value)} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <Section title="Relleno">
+        <select value={d.bgFill ? 'solid' : 'none'} onChange={(e) => set({ bgFill: e.target.value === 'none' ? null : '#ffffff' })}>
+          <option value="solid">Relleno de color</option>
+          <option value="none">Sin relleno</option>
+        </select>
+        {d.bgFill && (
+          <>
+            <ColorInput label="Color de fondo del gráfico" value={d.bgFill} onChange={(c) => set({ bgFill: c })} />
+            <Field label="Opacidad">
+              <Slider label="Opacidad del fondo" value={d.bgOpacity} onChange={(v) => set({ bgOpacity: v })} />
+            </Field>
+          </>
+        )}
+      </Section>
+      <Section title="Trazo">
         <div className="we-gp-row">
-          <button type="button" className="we-gp-btn" onClick={() => set({ categories: [...d.categories, `Categoría ${nCat + 1}`], series: d.series.map((s) => ({ ...s, values: [...s.values.slice(0, nCat), 0] })) })}>
-            <Plus size={13} /> Categoría
-          </button>
-          <button type="button" className="we-gp-btn" disabled={nCat <= 1} onClick={() => set({ categories: d.categories.slice(0, -1), series: d.series.map((s) => ({ ...s, values: s.values.slice(0, nCat - 1) })) })}>
-            <Minus size={13} /> Categoría
-          </button>
-          <button type="button" className="we-gp-btn" onClick={() => set({ series: [...d.series, { name: `Serie ${d.series.length + 1}`, values: d.categories.map(() => 1) }] })}>
-            <Plus size={13} /> Serie
-          </button>
-          <button type="button" className="we-gp-btn" disabled={d.series.length <= 1} onClick={() => set({ series: d.series.slice(0, -1) })}>
-            <Minus size={13} /> Serie
-          </button>
+          <Field label="Tamaño">
+            <select
+              value={d.borderColor ? String(d.borderWidth) : '0'}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                set(v === 0 ? { borderColor: null } : { borderWidth: v, borderColor: d.borderColor ?? '#7f7f7f' });
+              }}
+            >
+              {STROKE_SIZES.map((s) => (
+                <option key={s} value={s}>{s === 0 ? 'Sin línea' : `${String(s).replace('.', ',')} pt`}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Tipo">
+            <select value={d.borderDash} onChange={(e) => set({ borderDash: e.target.value })}>
+              <option value="solid">Continua</option>
+              <option value="dash">Guiones</option>
+              <option value="dot">Puntos</option>
+              <option value="dashDot">Guion y punto</option>
+            </select>
+          </Field>
         </div>
-        <p className="we-gp-hint">
-          {d.chartType === 'pie' || d.chartType === 'doughnut'
-            ? 'El gráfico circular usa la primera serie.'
-            : d.chartType === 'scatter'
-              ? 'En dispersión, las categorías son los valores X.'
-              : d.chartType === 'combo'
-                ? 'La última serie se dibuja como línea.'
-                : 'Edita los valores y pulsa Enter.'}
-        </p>
+        {d.borderColor && (
+          <>
+            <ColorInput label="Color del borde" value={d.borderColor} onChange={(c) => set({ borderColor: c })} />
+            <Field label="Opacidad">
+              <Slider label="Opacidad del borde" value={d.borderOpacity} onChange={(v) => set({ borderOpacity: v })} />
+            </Field>
+          </>
+        )}
       </Section>
     </>
   );
@@ -517,7 +523,7 @@ export function GraphicPanel({ editor, graphic, onClose }: Props) {
       </div>
       <div className="we-gp-body" key={pos}>
         {gtype === 'shape' && <ShapeSettings d={data as ShapeAttrs} set={set} />}
-        {gtype === 'chart' && <ChartSettings d={data as ChartAttrs} set={set} />}
+        {gtype === 'chart' && <ChartSettings d={data as ChartAttrs} set={set} onEditData={() => openChartEditor(editor.view.dom as HTMLElement, pos)} />}
         {gtype === 'smartart' && <SmartArtSettings d={data as SmartArtAttrs} set={set} />}
         <Section title="Tamaño y posición">
           <SizeFields data={data} set={set} />

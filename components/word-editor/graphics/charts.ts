@@ -75,7 +75,10 @@ export function renderChartSvg(a: ChartAttrs): string {
   const W = Math.max(120, a.width);
   const H = Math.max(90, a.height);
   const t = a.chartType;
-  let body = `<rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" fill="#ffffff" stroke="${GRID}"/>`;
+  // Área del gráfico: relleno y borde configurables
+  const bw = a.borderColor ? (a.borderWidth ?? 0.75) * (96 / 72) : 0;
+  const dash = a.borderDash && a.borderDash !== 'solid' ? ` stroke-dasharray="${a.borderDash === 'dot' ? `${fmt(bw)} ${fmt(bw * 2)}` : a.borderDash === 'dash' ? `${fmt(bw * 4)} ${fmt(bw * 3)}` : `${fmt(bw * 4)} ${fmt(bw * 2)} ${fmt(bw)} ${fmt(bw * 2)}`}"` : '';
+  let body = `<rect class="we-chart-area" x="${fmt(bw / 2)}" y="${fmt(bw / 2)}" width="${fmt(W - bw)}" height="${fmt(H - bw)}" fill="${a.bgFill ? esc(a.bgFill) : 'none'}" fill-opacity="${a.bgOpacity ?? 1}"${a.borderColor ? ` stroke="${esc(a.borderColor)}" stroke-width="${fmt(bw)}" stroke-opacity="${a.borderOpacity ?? 1}"${dash}` : ''}/>`;
   let top = 10;
   if (a.title) {
     body += text(W / 2, 26, ellipsize(a.title, W - 20, { size: 15, family: 'Arial' }), 'middle', 15, LABEL);
@@ -383,9 +386,15 @@ export function chartIconSvg(type: ChartType, size = 44): string {
     showLegend: false,
     showValues: false,
     showGrid: false,
+    bgFill: null,
+    bgOpacity: 1,
+    borderColor: null,
+    borderWidth: 0,
+    borderDash: 'solid',
+    borderOpacity: 1,
   };
   const svg = renderChartSvg(demo)
     .replace(/<text[^>]*>[^<]*<\/text>/g, '')
-    .replace(/<rect x="0.5" y="0.5"[^>]*\/>/, '');
+    .replace(/<rect class="we-chart-area"[^>]*\/>/, '');
   return svg.replace(/width="160" height="120"/, `width="${size}" height="${Math.round(size * 0.75)}"`);
 }

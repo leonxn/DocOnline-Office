@@ -50,9 +50,13 @@ import { WordEditor } from 'doconline-office';
 |---|---|
 | ![Paginación](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/paginacion.png) | ![Menú contextual](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/menu-contextual.png) |
 
-| Disposición: sangrías, espaciado y marca de agua | Dentro de un formulario |
+| Formas, SmartArt y gráficos con su Editor de gráficos | Galería de formas por categorías |
 |---|---|
-| ![Disposición](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/disposicion.png) | ![Formulario](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/formulario.png) |
+| ![Gráficos](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/graficos.png) | ![Formas](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/insertar-formas.png) |
+
+| Diseño: sangrías, espaciado y marca de agua | Dentro de un formulario (se envía como Word o PDF) |
+|---|---|
+| ![Diseño](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/disposicion.png) | ![Formulario](https://raw.githubusercontent.com/leonxn/DocOnline-Office/main/docs/screenshots/formulario.png) |
 
 ---
 
@@ -88,6 +92,22 @@ import { WordEditor } from 'doconline-office';
 - **Clic derecho** abre un menú con las acciones de tabla. Mayús + clic derecho abre el menú del
   navegador, con la ortografía.
 
+**Formas, SmartArt y gráficos (pestaña Insertar)**
+- **Formas:** más de 100 en 9 categorías (básicas, flechas, matemáticas, diagrama de flujo, cintas
+  y estrellas, llamadas, botones, rectángulos y líneas) y «Usados recientemente».
+- **SmartArt:** listas, procesos, ciclos, organigrama, Venn, radial, matriz y pirámides; el texto se
+  edita una línea por elemento y Tab cambia el nivel.
+- **Gráficos:** columnas, barras, líneas, áreas, circular, anillo, dispersión, radial y
+  combinado. Sus datos se editan en el **Editor de gráficos**, una hoja de cálculo como la de
+  Excel: fila 1 = series, columna A = categorías, Enter/Tab/flechas, deshacer, insertar o
+  quitar filas y columnas, cambiar filas por columnas y **pegar desde Excel**. El gráfico se
+  actualiza mientras escribes.
+- Asas para cambiar el tamaño, **giro**, arrastrar para mover, escribir dentro de la forma y
+  **ajuste del texto** (en línea o cuadrado a la izquierda o derecha).
+- **Panel de propiedades:** relleno y opacidad, trazo (tamaño, color, tipo y opacidad), texto,
+  rotación y volteo, sombra, estilos rápidos y tamaño en cm.
+- **Cuadro de texto**, **Galería de texto** (WordArt), **Letra capital** y **Ecuación**.
+
 **Herramientas de IA (Claude o Gemini)**
 - **Chat de IA** en un panel lateral, con sugerencias rápidas: resumir, reescribir, simplificar,
   ampliar, revisar, traducir, sugerir título, puntos clave…
@@ -103,16 +123,17 @@ import { WordEditor } from 'doconline-office';
   Ver [Herramientas de IA](#herramientas-de-ia).
 
 **Cinta de opciones**
-- **Archivo:** nuevo, abrir (.docx, .html, .txt), guardar, descargar .docx o HTML, e imprimir o
-  guardar como PDF.
+- **Archivo:** nuevo, abrir (.docx, .html, .txt), guardar, descargar .docx, **PDF** o HTML, e
+  imprimir.
 - **Inicio:**
   - fuente, tamaño, MAYÚSCULAS/minúsculas, negrita, cursiva, subrayado, tachado, índices,
     resaltado, color y borrar formato;
   - viñetas, numeración (1, a, A, i, I) y listas de tareas;
   - sangría, interlineado, alineación, sombreado y copiar formato;
   - galería de estilos.
-- **Insertar:** tabla, imagen (archivo, URL, pegar o arrastrar), vínculo, línea, salto de página,
-  encabezado, pie, número de página, fecha y hora, código y símbolos.
+- **Insertar:** tabla, imagen (archivo, URL, pegar o arrastrar), forma, SmartArt, gráfico, línea,
+  vínculo, salto de página, encabezado, pie, número de página, cuadro de texto, galería de texto,
+  letra capital, fecha y hora, código, ecuación y símbolos.
 - **Diseño:**
   - márgenes, orientación, tamaño (A4, Carta, Oficio, A5), saltos y guiones automáticos;
   - sangrías y espaciado del párrafo;
@@ -133,8 +154,10 @@ import { WordEditor } from 'doconline-office';
   - encabezados y pies, con primera página y pares distintas;
   - los campos de número de página;
   - tablas con anchos de columna, sombreado y bordes;
-  - imágenes, listas, estilos, sangrías y espaciado.
-- **Imprimir o PDF:** imprime exactamente las hojas que ves en pantalla.
+  - imágenes, listas, estilos, sangrías y espaciado;
+  - formas, gráficos y SmartArt (como imagen nítida, flotante si el texto los rodea).
+- **PDF directo** (sin diálogo de impresión): las hojas tal como se ven en pantalla.
+- **Imprimir:** imprime exactamente las hojas que ves en pantalla.
 
 **Atajos:** Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+S (guardar), Ctrl+P (imprimir), Ctrl+F/H (buscar y
 reemplazar), Ctrl+O (abrir), Ctrl+Enter (salto de página), Tab/Mayús+Tab y Esc.
@@ -233,35 +256,54 @@ export function App() {
 }
 ```
 
-### 4. Dentro de un formulario
+### 4. Dentro de un formulario (se envía como Word o PDF)
 
-Usa una `ref` para leer el documento al enviar:
+Dale un `name` al editor y se comporta como un campo más del `<form>`: **al enviar el
+formulario**, el documento se genera en el formato elegido y viaja como archivo en ese campo.
+No hace falta el botón Guardar de la barra.
 
 ```tsx
 'use client';
-import { useRef } from 'react';
-import { WordEditor, type WordEditorHandle } from 'doconline-office';
+import { WordEditor } from 'doconline-office';
 
 export function Formulario() {
-  const ref = useRef<WordEditorHandle>(null);
-
-  async function enviar() {
-    const doc = ref.current!.getDocument();       // { title, json, html, settings }
-    const docx = await ref.current!.exportDocx(); // Blob .docx
-
-    const body = new FormData();
-    body.append('documento', JSON.stringify(doc));
-    body.append('archivo', docx, `${doc.title}.docx`);
-    await fetch('/api/oficios', { method: 'POST', body });
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget); // ya incluye el archivo en "documento"
+    await fetch('/api/tramites', { method: 'POST', body: data });
   }
 
   return (
-    <>
-      <WordEditor ref={ref} height={650} hideTitleBar />
-      <button onClick={enviar}>Enviar</button>
-    </>
+    <form onSubmit={onSubmit}>
+      <input name="asunto" required />
+      <WordEditor
+        name="documento"     // campo del formulario con el archivo
+        formFormat="pdf"     // 'docx' (por defecto), 'pdf' o ['docx', 'pdf']
+        fileName="Solicitud" // sin extensión; por defecto, el título
+        includeJson          // además envía "documento_json" (editable para volver a abrirlo)
+        required             // no deja enviar un documento vacío
+        height={650}
+        hideTitleBar
+      />
+      <button type="submit">Enviar</button>
+    </form>
   );
 }
+```
+
+- En el servidor llega como un archivo subido normal (por ejemplo, con `multer` en NestJS/Express).
+  Con `['docx', 'pdf']` llegan los dos archivos en el mismo campo.
+- Si el formulario se envía de forma nativa (sin `fetch`), usa `encType="multipart/form-data"`.
+- Mientras se genera el archivo aparece «Preparando el documento para enviar…».
+- Enter dentro de la cinta o de los paneles del editor no envía el formulario.
+
+Si prefieres controlarlo tú, usa la `ref`:
+
+```tsx
+const ref = useRef<WordEditorHandle>(null);
+const pdf = await ref.current!.exportFile('pdf');   // File "Título.pdf"
+const docx = await ref.current!.exportDocx();       // Blob .docx
+const doc = ref.current!.getDocument();             // { title, json, html, settings }
 ```
 
 ### 5. Encabezado y número de página por defecto
@@ -399,6 +441,11 @@ SQL sugerida.
 | `height` | `CSSProperties['height']` | Alto total del editor. Por defecto, `100%` del contenedor. |
 | `placeholder` | `string` | Texto guía con el documento vacío. |
 | `className` | `string` | Clase extra para la raíz. |
+| `name` | `string` | Dentro de un `<form>`: nombre del campo donde viaja el documento al enviar el formulario. |
+| `formFormat` | `'docx' \| 'pdf' \| ('docx' \| 'pdf')[]` | Formato del archivo que se envía con el formulario. Por defecto, `'docx'`. |
+| `fileName` | `string` | Nombre del archivo (sin extensión). Por defecto, el título del documento. |
+| `includeJson` | `boolean` | Envía también el documento editable en el campo `${name}_json`. |
+| `required` | `boolean` | No deja enviar el formulario con el documento vacío. |
 | `ai` | `AiOptions \| false` | Herramientas de IA: sin valor = clave de cada usuario; `{ endpoint }` = tu servidor; `false` = ocultar. |
 | `ref` | `Ref<WordEditorHandle>` | Acceso a los métodos de abajo. |
 
@@ -409,6 +456,8 @@ SQL sugerida.
 | `getDocument()` | `WordDocument` | Leer el documento actual (al enviar un formulario). |
 | `setDocument(doc)` | `void` | Cargar otro documento (HTML o `WordDocument`). |
 | `exportDocx()` | `Promise<Blob>` | Generar el .docx para adjuntarlo o subirlo. |
+| `exportPdf()` | `Promise<Blob>` | Generar el PDF (sin abrir el diálogo de impresión). |
+| `exportFile(format)` | `Promise<File>` | `'docx'` o `'pdf'` como `File` con nombre y tipo, listo para `FormData`. |
 | `print()` | `void` | Abrir el diálogo de impresión o PDF. |
 | `focus()` | `void` | Poner el cursor en el documento. |
 | `editor` | `Editor \| null` | La instancia de Tiptap, para comandos avanzados. |
@@ -471,8 +520,11 @@ docs/screenshots/           capturas del README
 - **Importar .docx:** conserva la estructura (títulos, formato básico, listas, tablas, imágenes,
   vínculos y saltos de página), pero no las fuentes, tamaños y colores exactos, ni el encabezado
   y pie del archivo.
-- **Exportar .docx:** la marca de agua no se exporta. Las imágenes de otros sitios solo se
-  incluyen si el sitio permite CORS.
+- **Exportar .docx:** la marca de agua y la letra capital no se exportan. Las formas, gráficos y
+  SmartArt van como imagen (en Word no se editan como gráfico nativo). Las imágenes de otros
+  sitios solo se incluyen si el sitio permite CORS.
+- **PDF directo:** cada hoja se guarda como imagen de alta resolución, así que su texto no se
+  puede seleccionar ni buscar. Para un PDF con texto, usa *Imprimir → Guardar como PDF*.
 - **Pegar con el botón** depende del permiso del navegador; Ctrl+V funciona siempre.
 - No incluye control de cambios, comentarios ni coedición en tiempo real. Tiptap permite
   agregarlos con Yjs (MIT).
@@ -487,6 +539,8 @@ docs/screenshots/           capturas del README
 | [docx](https://docx.js.org) | exportar a .docx | MIT |
 | [mammoth](https://github.com/mwilliamson/mammoth.js) | abrir .docx | BSD-2-Clause |
 | [lucide-react](https://lucide.dev) | íconos | ISC |
+| [jsPDF](https://github.com/parallax/jsPDF) | PDF directo | MIT |
+| [html-to-image](https://github.com/bubkoo/html-to-image) | dibujar las hojas para el PDF | MIT |
 | [@anthropic-ai/sdk](https://github.com/anthropics/anthropic-sdk-typescript) | IA con Claude | MIT |
 | [@google/genai](https://github.com/googleapis/js-genai) | IA con Gemini | Apache-2.0 |
 | [Next.js](https://nextjs.org) / React | demo | MIT |

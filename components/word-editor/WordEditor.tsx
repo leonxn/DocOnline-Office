@@ -39,6 +39,8 @@ import {
 import { AiConnectDialog } from './ui/AiConnectDialog';
 import { AiPanel } from './ui/AiPanel';
 import { GraphicPanel } from './ui/GraphicPanel';
+import { ChartDataEditor } from './ui/ChartDataEditor';
+import { CHART_EDIT_EVENT, type ChartEditDetail } from './graphics/render';
 import { ContextMenu } from './ui/ContextMenu';
 import { Btn } from './ui/controls';
 import { selectEditorState } from './ui/editor-state';
@@ -81,7 +83,26 @@ export interface WordEditorProps {
    */
   ai?: false | AiOptions;
   className?: string;
+
+  // --- Dentro de un <form> -------------------------------------------------
+  /**
+   * Nombre del campo cuando el editor está dentro de un `<form>`. Al enviar el formulario, el
+   * documento se genera en el formato elegido y viaja como archivo en este campo (igual que un
+   * `<input type="file" name="…">`). El formulario debe usar `encType="multipart/form-data"`
+   * si se envía de forma nativa; con `fetch(new FormData(form))` funciona tal cual.
+   */
+  name?: string;
+  /** Formato del archivo que se adjunta al enviar: `'docx'` (por defecto), `'pdf'` o ambos `['docx', 'pdf']`. */
+  formFormat?: FormFileFormat | FormFileFormat[];
+  /** Nombre del archivo, sin extensión. Por defecto, el título del documento. */
+  fileName?: string;
+  /** Envía también el documento editable (JSON con título, contenido, HTML y página) en el campo `${name}_json`. */
+  includeJson?: boolean;
+  /** No deja enviar el formulario si el documento está vacío. */
+  required?: boolean;
 }
+
+export type FormFileFormat = 'docx' | 'pdf';
 
 /** Documento de entrada: como `WordDocument`, pero todo opcional. */
 export type WordDocumentInput = Partial<Omit<WordDocument, 'settings'>> & { settings?: Partial<PageSettings> };
@@ -91,6 +112,10 @@ export interface WordEditorHandle {
   getDocument: () => WordDocument;
   setDocument: (doc: string | WordDocumentInput) => void;
   exportDocx: () => Promise<Blob>;
+  /** Genera el PDF (las hojas tal como se ven) sin abrir el diálogo de impresión. */
+  exportPdf: () => Promise<Blob>;
+  /** Genera el archivo listo para adjuntar (`File` con nombre y tipo). */
+  exportFile: (format: FormFileFormat) => Promise<File>;
   print: () => void;
   focus: () => void;
 }
@@ -192,6 +217,11 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
     hideTitleBar = false,
     className = '',
     ai,
+    name,
+    formFormat = 'docx',
+    fileName,
+    includeJson = false,
+    required = false,
   },
   ref,
 ) {
@@ -240,8 +270,8 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<Editor | null>(null);
   // Refs para leer el estado más reciente desde callbacks del editor sin recrearlo
-  const latest = useRef({ title, settings, onChange, onSave });
-  latest.current = { title, settings, onChange, onSave };
+  const latest = useRef({ title, settings, onChange, onSave, fileName });
+  latest.current = { title, settings, onChange, onSave, fileName };
 
   const notify = useCallback((msg: string) => {
     setToast(msg);
@@ -326,6 +356,18 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
   const selectedGraphic = !hfEdit && editable ? sMain?.graphic ?? null : null;
   const [graphicPanelClosed, setGraphicPanelClosed] = useState<number | null>(null);
   const showGraphicPanel = !!selectedGraphic && graphicPanelClosed !== selectedGraphic.pos;
+
+  // «Editor de gráficos» (hoja de datos) del gráfico en `chartEditPos`
+  const [chartEditPos, setChartEditPos] = useState<number | null>(null);
+  const closeChartEditor = useCallback(() => setChartEditPos(null), []);
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const d = (e as CustomEvent<ChartEditDetail>).detail;
+      if (editor && d.dom === editor.view.dom) setChartEditPos(d.pos);
+    };
+    window.addEventListener(CHART_EDIT_EVENT, onOpen);
+    return () => window.removeEventListener(CHART_EDIT_EVENT, onOpen);
+  }, [editor]);
 
   useEffect(() => {
     editor?.setEditable(editable && !hfEdit);
@@ -590,6 +632,65 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
     );
   }, [editor, pitch, sheetW, sheetH, contentLeft, effTop, contentWidth, usablePx, settings.hyphenation, title]);
 
+  /** Espera a que se cierre la edición del encabezado/pie (para exportar su versión final). */
+  const settle = useCallback(async () => {
+    if (!hfEdit) return;
+    exitHeaderFooter();
+    await new Promise((r) => setTimeout(r, 80));
+  }, [hfEdit, exitHeaderFooter]);
+
+  const geometryRef = useRef<() => PrintGeometry | null>(() => null);
+  geometryRef.current = () =>
+    editor && sheetsRef.current
+      ? {
+          sheets: Array.from(sheetsRef.current.querySelectorAll<HTMLElement>('.we-sheet')),
+          content: editor.view.dom,
+          pitch,
+          sheetWidth: sheetW,
+          sheetHeight: sheetH,
+          contentLeft,
+          contentTop: effTop,
+          contentWidth,
+          usable: usablePx,
+          rootClass: settings.hyphenation ? 'is-hyphenated' : '',
+          rootStyle: `--we-heading-color: ${settings.themeColor}`,
+        }
+      : null;
+
+  const makePdf = useCallback(async (): Promise<Blob> => {
+    await settle();
+    const geo = geometryRef.current();
+    if (!geo) throw new Error('El editor todavía no está listo');
+    const { exportPdf } = await import('./io/pdf-export');
+    return exportPdf(geo, latest.current.title);
+  }, [settle]);
+
+  const makeDocx = useCallback(async (): Promise<Blob> => {
+    await settle();
+    const { exportDocx } = await import('./io/docx-export');
+    return exportDocx(editor?.getJSON() ?? { type: 'doc' }, latest.current.settings, latest.current.title);
+  }, [editor, settle]);
+
+  const makeFile = useCallback(
+    async (format: FormFileFormat): Promise<File> => {
+      const blob = format === 'pdf' ? await makePdf() : await makeDocx();
+      const base = (latest.current.fileName || latest.current.title || 'documento').trim();
+      return new File([blob], safeFileName(base, format), {
+        type: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+    },
+    [makePdf, makeDocx],
+  );
+
+  const savePdf = useCallback(async () => {
+    try {
+      notify('Generando PDF…');
+      downloadBlob(await makePdf(), safeFileName(title, 'pdf'));
+    } catch (err) {
+      notify(`No se pudo generar el PDF: ${err instanceof Error ? err.message : err}`);
+    }
+  }, [makePdf, title, notify]);
+
   const print = useCallback(() => {
     if (hfEdit) {
       // Primero se cierra la edición del encabezado para imprimir su versión final
@@ -665,6 +766,7 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
     openFile: () => fileInputRef.current?.click(),
     save,
     saveDocx,
+    savePdf,
     exportHtml: () => editor && exportHtml(editor, title, settings.themeColor),
     print,
     openFind: setFind,
@@ -703,15 +805,68 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
         setTitle(n.title);
         setSettings(n.settings);
       },
-      exportDocx: async () => {
-        const { exportDocx } = await import('./io/docx-export');
-        return exportDocx(editor?.getJSON() ?? { type: 'doc' }, latest.current.settings, latest.current.title);
-      },
+      exportDocx: makeDocx,
+      exportPdf: makePdf,
+      exportFile: makeFile,
       print,
       focus: () => editor?.commands.focus(),
     }),
-    [editor, getDocument, print],
+    [editor, getDocument, print, makeDocx, makePdf, makeFile],
   );
+
+  // --- Dentro de un <form>: al enviarlo, el documento viaja como archivo en el campo `name`
+  const formFileRef = useRef<HTMLInputElement>(null);
+  const formJsonRef = useRef<HTMLInputElement>(null);
+  const formLatest = useRef({ formFormat, required, includeJson });
+  formLatest.current = { formFormat, required, includeJson };
+  const [formBusy, setFormBusy] = useState(false);
+  useEffect(() => {
+    if (!name || !editor) return;
+    const form = rootRef.current?.closest('form');
+    if (!form) return;
+    let bypass = false;
+    let busy = false;
+    const onSubmit = async (e: SubmitEvent) => {
+      if (e.target !== form) return;
+      if (bypass) {
+        // Segundo envío, ya con el archivo listo: sigue su curso normal
+        bypass = false;
+        return;
+      }
+      // Se detiene el envío mientras se genera el archivo y luego se vuelve a enviar
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (busy) return;
+      const { formFormat: fmt, required: req, includeJson: withJson } = formLatest.current;
+      if (req && editor.isEmpty) {
+        notify('El documento está vacío: escribe el contenido antes de enviar.');
+        editor.commands.focus();
+        return;
+      }
+      busy = true;
+      setFormBusy(true);
+      try {
+        const formats = Array.from(new Set(Array.isArray(fmt) ? fmt : [fmt]));
+        const files: File[] = [];
+        for (const f of formats) files.push(await makeFile(f));
+        const dt = new DataTransfer();
+        files.forEach((f) => dt.items.add(f));
+        if (formFileRef.current) formFileRef.current.files = dt.files;
+        if (withJson && formJsonRef.current) formJsonRef.current.value = JSON.stringify(getDocument());
+        bypass = true;
+        const submitter = e.submitter && form.contains(e.submitter) ? (e.submitter as HTMLButtonElement) : undefined;
+        form.requestSubmit(submitter);
+      } catch (err) {
+        notify(`No se pudo preparar el documento: ${err instanceof Error ? err.message : err}`);
+      } finally {
+        bypass = false;
+        busy = false;
+        setFormBusy(false);
+      }
+    };
+    form.addEventListener('submit', onSubmit, true);
+    return () => form.removeEventListener('submit', onSubmit, true);
+  }, [name, editor, makeFile, getDocument, notify]);
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -836,6 +991,11 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
       data-theme={theme}
       style={{ height, '--we-heading-color': settings.themeColor } as CSSProperties}
       onKeyDown={onKeyDown}
+      onKeyDownCapture={(e) => {
+        // Enter en los campos de la cinta o los paneles no debe enviar el formulario que contiene al editor
+        const t = e.target as HTMLInputElement;
+        if (e.key === 'Enter' && t.tagName === 'INPUT' && t.type !== 'checkbox' && t.type !== 'radio') e.preventDefault();
+      }}
     >
       <style>{CONTENT_CSS}</style>
 
@@ -1066,6 +1226,10 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
         )}
       </div>
 
+      {editor && chartEditPos != null && editable && (
+        <ChartDataEditor key={chartEditPos} editor={editor} pos={chartEditPos} onClose={closeChartEditor} />
+      )}
+
       {chat && aiOptions && aiConnectOpen && (
         <AiConnectDialog chat={chat} options={aiOptions} onClose={() => setAiConnectOpen(false)} />
       )}
@@ -1102,6 +1266,18 @@ export const WordEditor = forwardRef<WordEditorHandle, WordEditorProps>(function
       {toast && (
         <div className="we-toast" role="status">
           {toast}
+        </div>
+      )}
+
+      {name && (
+        <>
+          <input ref={formFileRef} type="file" name={name} multiple hidden tabIndex={-1} aria-hidden="true" />
+          {includeJson && <input ref={formJsonRef} type="hidden" name={`${name}_json`} />}
+        </>
+      )}
+      {formBusy && (
+        <div className="we-form-busy" role="status">
+          <span className="we-spinner" aria-hidden="true" /> Preparando el documento para enviar…
         </div>
       )}
 

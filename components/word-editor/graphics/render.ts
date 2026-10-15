@@ -80,3 +80,14 @@ export function rotatedBox(width: number, height: number, deg: number): { width:
   const s = Math.abs(Math.sin(r));
   return { width: Math.round(width * c + height * s), height: Math.round(width * s + height * c) };
 }
+
+/** Evento para abrir el «Editor de gráficos» (hoja de datos) de un gráfico. */
+export const CHART_EDIT_EVENT = 'we-chart-edit';
+export interface ChartEditDetail {
+  pos: number;
+  dom: HTMLElement;
+}
+
+export function openChartEditor(dom: HTMLElement, pos: number) {
+  window.dispatchEvent(new CustomEvent<ChartEditDetail>(CHART_EDIT_EVENT, { detail: { pos, dom } }));
+}

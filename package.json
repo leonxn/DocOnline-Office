@@ -1,6 +1,6 @@
 {
   "name": "doconline-office",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Editor de documentos tipo Word para React y Next.js: hojas reales, encabezado y pie de página, tablas, exportación a .docx y PDF",
   "license": "MIT",
   "author": "Carlos Leon",
@@ -77,6 +77,8 @@
     "@tiptap/react": "^3.32.0",
     "@tiptap/starter-kit": "^3.32.0",
     "docx": "^9.11.0",
+    "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.57.0",
     "mammoth": "^1.13.0"
   },

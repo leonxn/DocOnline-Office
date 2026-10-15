@@ -57,6 +57,7 @@ export type ChartType =
 
 export interface ChartSeries {
   name: string;
+  /** `null` en JSON = celda vacía. */
   values: number[];
   color?: string;
 }
@@ -69,6 +70,15 @@ export interface ChartAttrs extends Box {
   showLegend: boolean;
   showValues: boolean;
   showGrid: boolean;
+  /** Relleno del área del gráfico (`null` = transparente). */
+  bgFill: string | null;
+  bgOpacity: number;
+  /** Borde del área del gráfico (`null` = sin borde). */
+  borderColor: string | null;
+  /** pt */
+  borderWidth: number;
+  borderDash: 'solid' | 'dash' | 'dot' | 'dashDot';
+  borderOpacity: number;
 }
 
 export type SmartArtLayout =
@@ -162,6 +172,12 @@ export const DEFAULT_CHART: Omit<ChartAttrs, 'chartType'> = {
   showLegend: true,
   showValues: false,
   showGrid: true,
+  bgFill: '#ffffff',
+  bgOpacity: 1,
+  borderColor: '#d9d9d9',
+  borderWidth: 0.75,
+  borderDash: 'solid',
+  borderOpacity: 1,
 };
 
 export const SMARTART_LAYOUTS: { id: SmartArtLayout; label: string; group: string }[] = [

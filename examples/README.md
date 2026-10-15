@@ -11,7 +11,7 @@ import { WordEditor } from 'doconline-office';
 | Ejemplo | Qué muestra |
 |---|---|
 | [01-basico](01-basico/EditorBasico.tsx) | El editor a pantalla completa con un HTML inicial. |
-| [02-formulario](02-formulario/FormularioOficio.tsx) | El editor como campo de un formulario: encabezado y número de página ya configurados, envío del JSON y del `.docx` con `FormData`. |
+| [02-formulario](02-formulario/FormularioOficio.tsx) | El editor como campo de un formulario: al enviarlo, el documento viaja como archivo Word o PDF (`name`, `formFormat`) junto con su JSON editable. |
 | [03-guardar-en-api](03-guardar-en-api/) | Abrir y guardar en tu API (botón Guardar, Ctrl+S y autoguardado) + el Route Handler de Next.js que lo recibe. |
 | [04-solo-lectura](04-solo-lectura/VisorDocumento.tsx) | Mostrar un documento guardado sin poder editarlo (se puede imprimir, buscar y hacer zoom). |
 | [05-backend-nestjs](05-backend-nestjs/documentos.controller.ts) | Controlador NestJS y tabla PostgreSQL sugerida para guardar los documentos. |
